@@ -84,6 +84,10 @@
   .sport.active { border-color: #10b981; background: #e7f9f2; color: #067a56; }
   .status { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2b3138; }
   .status b { color: #10b981; font-size: 20px; }
+  .live {
+    margin-bottom: 10px; padding: 8px 12px; background: #e7f9f2; color: #067a56;
+    border: 2px solid #10b981; border-radius: 12px; font-size: 14px; font-weight: 800;
+  }
   .timerow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .timerow label { width: 92px; flex-shrink: 0; font-size: 15px; font-weight: 600; color: #3b424a; }
   .timerow select {
@@ -725,6 +729,7 @@
     card.innerHTML =
       '<h2></h2>' +
       '<div class="sports">' + sportsHtml + '</div>' +
+      '<div class="live" style="display:none"></div>' +
       '<div class="status">Aktuell <b class="pl">0</b> Spieler angemeldet</div>' +
       '<div class="timerow"><label>📅 Tag</label><select class="dsel"></select></div>' +
       '<div class="timerow"><label>🕒 Uhrzeit</label><select class="tsel">' + timeHtml + '</select></div>' +
@@ -745,6 +750,7 @@
       title: card.querySelector("h2"),
       sportBtns: card.querySelectorAll(".sport"),
       pl: card.querySelector(".pl"),
+      liveEl: card.querySelector(".live"),
       dsel: card.querySelector(".dsel"),
       tsel: card.querySelector(".tsel"),
       joinBtn: card.querySelector(".join"),
@@ -1012,6 +1018,10 @@
 
     c.pl.textContent = active ? s.players : 0;
 
+    var live = active && wallStart(s.date, s.time) <= wallNow();
+    c.liveEl.style.display = live ? "" : "none";
+    c.liveEl.textContent = live ? "🟢 Session läuft gerade (seit " + s.time + " Uhr)" : "";
+
     var joinedNow = isJoined(c.key, c.sport);
     c.joinBtn.className = "join" + (joinedNow ? " leave" : "");
     c.joinBtn.textContent = joinedNow ? "Absagen" : "Ich bin dabei";
@@ -1082,7 +1092,11 @@
         nm.textContent = "📍 " + v.name;
         var sub = document.createElement("span");
         sub.className = "dash-sub";
-        sub.textContent = it.sport.icon + " " + it.sport.name + " · 🕒 " + dateLabel(it.s.date) + ", " + it.s.time + " Uhr";
+        if (it.start <= wallNow()) {
+          sub.textContent = it.sport.icon + " " + it.sport.name + " · 🟢 Läuft gerade (seit " + it.s.time + " Uhr)";
+        } else {
+          sub.textContent = it.sport.icon + " " + it.sport.name + " · 🕒 " + dateLabel(it.s.date) + ", " + it.s.time + " Uhr";
+        }
         main.appendChild(nm);
         main.appendChild(sub);
 
