@@ -132,6 +132,47 @@
     padding: 0 18px; font-size: 15px; font-weight: 700; color: #ffffff;
     background: #10b981; border: none; border-radius: 12px; cursor: pointer;
   }
+  .fx { position: fixed; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; overflow: hidden; }
+  .fx .ball { position: absolute; margin: -20px 0 0 -20px; line-height: 1; opacity: 0; will-change: transform, opacity; animation-delay: var(--delay); animation-fill-mode: both; }
+  .fx.fussball .ball { animation-name: kick; animation-duration: 1.4s; animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
+  .fx.basketball .ball { animation-name: dribble; animation-duration: 1.5s; animation-timing-function: ease-in; }
+  .fx.volleyball .ball { animation-name: volley; animation-duration: 1.7s; animation-timing-function: ease-in-out; }
+  @keyframes kick {
+    0% { transform: translate(0, 0) scale(0.4) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    55% { transform: translate(calc(var(--dx) * 0.75), calc(var(--dy) * -1)) scale(1.15) rotate(calc(var(--rot) * 0.6)); opacity: 1; }
+    100% { transform: translate(var(--dx), 30vh) scale(0.8) rotate(var(--rot)); opacity: 0; }
+  }
+  @keyframes dribble {
+    0% { transform: translate(var(--dx), -45vh) scale(1, 1); opacity: 0; }
+    8% { opacity: 1; }
+    30% { transform: translate(var(--dx), 0) scale(1.18, 0.82); }
+    46% { transform: translate(var(--dx), -22vh) scale(1, 1); }
+    60% { transform: translate(var(--dx), 0) scale(1.14, 0.86); }
+    72% { transform: translate(var(--dx), -9vh) scale(1, 1); }
+    82% { transform: translate(var(--dx), 0) scale(1.08, 0.92); opacity: 1; }
+    100% { transform: translate(var(--dx), 0) scale(1, 1); opacity: 0; }
+  }
+  @keyframes volley {
+    0% { transform: translate(0, 0) scale(0.5) rotate(0deg); opacity: 0; }
+    12% { opacity: 1; }
+    50% { transform: translate(calc(var(--dx) * 0.5), calc(var(--dy) * -1.1)) scale(1.2) rotate(180deg); opacity: 1; }
+    100% { transform: translate(var(--dx), calc(var(--dy) * -0.35)) scale(0.9) rotate(var(--rot)); opacity: 0; }
+  }
+  .fx-msg {
+    position: fixed; left: 50%; top: 36%; z-index: 31; pointer-events: none;
+    padding: 14px 22px; background: #10b981; color: #ffffff; font-size: 22px; font-weight: 800;
+    border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); white-space: nowrap;
+    transform: translate(-50%, -50%) scale(0.6); opacity: 0; animation: msgpop 1.7s ease forwards;
+  }
+  @keyframes msgpop {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    24% { transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -64%) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) { .fx .ball { display: none; } }
   .toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     background: #ffffff; color: #1f2328; padding: 12px 18px; border-radius: 14px;
@@ -269,6 +310,57 @@
     toastEl.style.display = "block";
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.style.display = "none"; }, 3800);
+  }
+
+  var FX_TEXT = {
+    fussball: "⚽ Tooor! Du bist dabei!",
+    basketball: "🏀 Swish! Du bist dabei!",
+    volleyball: "🏐 Aufschlag! Du bist dabei!"
+  };
+  var fxTimer = null;
+
+  function playSportFx(sportId, anchor) {
+    var icons = { fussball: "⚽", basketball: "🏀", volleyball: "🏐" };
+    if (!icons[sportId]) return;
+    var oldFx = document.querySelector(".fx");
+    if (oldFx && oldFx.parentNode) oldFx.parentNode.removeChild(oldFx);
+    var oldMsg = document.querySelector(".fx-msg");
+    if (oldMsg && oldMsg.parentNode) oldMsg.parentNode.removeChild(oldMsg);
+    if (fxTimer) clearTimeout(fxTimer);
+
+    var ox = window.innerWidth / 2;
+    var oy = window.innerHeight * 0.6;
+    if (anchor && anchor.getBoundingClientRect) {
+      var r = anchor.getBoundingClientRect();
+      ox = r.left + r.width / 2;
+      oy = r.top + r.height / 2;
+    }
+    var box = document.createElement("div");
+    box.className = "fx " + sportId;
+    var spread = Math.min(window.innerWidth * 0.42, 190);
+    for (var i = 0; i < 14; i++) {
+      var b = document.createElement("span");
+      b.className = "ball";
+      b.textContent = icons[sportId];
+      b.style.left = ox + "px";
+      b.style.top = oy + "px";
+      b.style.fontSize = (26 + Math.round(Math.random() * 18)) + "px";
+      b.style.setProperty("--dx", Math.round((Math.random() * 2 - 1) * spread) + "px");
+      b.style.setProperty("--dy", Math.round(180 + Math.random() * 260) + "px");
+      b.style.setProperty("--rot", Math.round((Math.random() * 2 - 1) * 540) + "deg");
+      b.style.setProperty("--delay", (i * 0.05).toFixed(2) + "s");
+      box.appendChild(b);
+    }
+    var msg = document.createElement("div");
+    msg.className = "fx-msg";
+    msg.textContent = FX_TEXT[sportId];
+    document.body.appendChild(box);
+    document.body.appendChild(msg);
+    try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
+    fxTimer = setTimeout(function () {
+      if (box.parentNode) box.parentNode.removeChild(box);
+      if (msg.parentNode) msg.parentNode.removeChild(msg);
+    }, 2300);
   }
 
   function pad(n) { return (n < 10 ? "0" : "") + n; }
@@ -841,6 +933,7 @@
         toast("Dieser Zeitpunkt ist schon vorbei. Bitte wähle einen späteren.");
         return;
       }
+      if (!wasJoined) playSportFx(sp, c.joinBtn);
       var tk = tokKey(key, sp);
       var prev = joined[tk];
       var expiredOld = null;
