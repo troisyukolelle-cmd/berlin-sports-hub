@@ -1516,6 +1516,9 @@
 
   function updateAreaOptions() {
     var counts = {};
+    for (var bk in BEZIRK_OT) {
+      if (BEZIRK_OT.hasOwnProperty(bk)) counts[bk] = 0;
+    }
     for (var k in data) {
       if (!data.hasOwnProperty(k)) continue;
       var b = bezirkOf(data[k]);
