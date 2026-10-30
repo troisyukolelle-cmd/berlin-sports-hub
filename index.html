@@ -2484,7 +2484,9 @@
     if (c === "auth/operation-not-allowed") return "Die Anmeldung ist noch nicht freigeschaltet (Firebase: E-Mail/Passwort aktivieren, das ist die Technik dahinter).";
     if (c === "auth/requires-recent-login") return "Bitte melde dich neu an und versuche es nochmal.";
     if (c === "PERMISSION_DENIED" || (e && /permission/i.test(String(e.message || "")))) return "Das ist nicht erlaubt. Bitte versuche es nochmal.";
-    return "Das hat leider nicht geklappt. Bitte versuche es nochmal.";
+    if (c === "auth/configuration-not-found") return "Authentication ist in Firebase noch nicht gestartet (Authentication > Los geht's).";
+    if (c === "auth/api-key-not-valid" || c === "auth/invalid-api-key") return "Der Firebase-Schlüssel (apiKey) wird nicht akzeptiert.";
+    return "Das hat leider nicht geklappt (" + (c || (e && e.message ? String(e.message).slice(0, 60) : "unbekannt")) + ").";
   }
 
   var USER_RE = /^[A-Za-z0-9_-]{2,20}$/;
