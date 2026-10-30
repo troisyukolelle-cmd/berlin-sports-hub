@@ -250,6 +250,10 @@
 
 <div class="wrap">
   <input id="search" class="search" type="text" placeholder="Such deinen lokalen Bolzplatz oder Park..." autocomplete="off" autocapitalize="words">
+  <div class="arearow">
+    <label for="sareaSel">🔎 Suche in</label>
+    <select id="sareaSel"><option value="">Ganz Berlin</option></select>
+  </div>
   <div id="suggest"></div>
   <div id="createArea"></div>
   <div class="toolrow">
@@ -1671,15 +1675,33 @@
     applyFilter();
     renderDash();
     updateMap();
-    if (!noSuggest && !selected && searchEl.value.trim().length >= 2) {
-      suggestState = "loading";
-      renderSuggest();
-      fetchSuggestions(searchEl.value);
-    }
   }
 
   try { areaSel = localStorage.getItem("bsh_area") || ""; } catch (e) { areaSel = ""; }
   areaEl.addEventListener("change", function () { setAreaFilter(areaEl.value); });
+
+  var sareaSel = "";
+  var sareaEl = document.getElementById("sareaSel");
+  Object.keys(BEZIRK_OT).sort(function (a, c) { return a.localeCompare(c, "de"); }).forEach(function (name) {
+    var o = document.createElement("option");
+    o.value = name;
+    o.textContent = name;
+    sareaEl.appendChild(o);
+  });
+  try {
+    var storedSarea = localStorage.getItem("bsh_sarea") || "";
+    if (BEZIRK_OT.hasOwnProperty(storedSarea)) sareaSel = storedSarea;
+  } catch (e) { sareaSel = ""; }
+  sareaEl.value = sareaSel;
+  sareaEl.addEventListener("change", function () {
+    sareaSel = sareaEl.value;
+    try { localStorage.setItem("bsh_sarea", sareaSel); } catch (e) {}
+    if (!selected && searchEl.value.trim().length >= 2) {
+      suggestState = "loading";
+      renderSuggest();
+      fetchSuggestions(searchEl.value);
+    }
+  });
 
   function updateNickBtn() {
     nickBtn.textContent = "👤 Spitzname: " + (myNick || "Anonym") + " · ändern";
@@ -1857,7 +1879,7 @@
       updateMap();
       return;
     }
-    var bzFilter = BEZIRK_OT.hasOwnProperty(areaSel) ? areaSel : "";
+    var bzFilter = BEZIRK_OT.hasOwnProperty(sareaSel) ? sareaSel : "";
     var ck = q.toLowerCase() + "|" + bzFilter;
     if (sugCache[ck]) {
       suggestions = sugCache[ck];
@@ -1928,8 +1950,8 @@
     } else if (suggestState === "empty") {
       var em = document.createElement("div");
       em.className = "sug-info";
-      em.textContent = BEZIRK_OT.hasOwnProperty(areaSel)
-        ? "Keinen passenden Park oder Sportplatz in " + areaSel + " gefunden. Wähle oben \"Alle Bezirke\", um in ganz Berlin zu suchen."
+      em.textContent = BEZIRK_OT.hasOwnProperty(sareaSel)
+        ? "Keinen passenden Park oder Sportplatz in " + sareaSel + " gefunden. Stelle \"Suche in\" auf \"Ganz Berlin\", um überall zu suchen."
         : "Keinen passenden Park oder Sportplatz in Berlin gefunden. Es können nur echte Orte aktiviert werden.";
       box.appendChild(em);
     } else {
