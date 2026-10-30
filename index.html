@@ -1212,7 +1212,7 @@
   function jumpToPlace(key, sportId) {
     var pv = data[key];
     if (!pv) return;
-    if (areaSel && !areaOk(pv)) setAreaFilter("");
+    if (areaSel && !areaOk(pv)) setAreaFilter("", true);
     searchEl.value = inMainView(pv) ? "" : pv.name;
     selected = null;
     sugSeq++;
@@ -1584,9 +1584,28 @@
   };
   var bezirkLookup = null;
 
-  function bezirkOf(v) {
-    var raw = v && typeof v.area === "string" ? v.area.trim() : "";
-    if (!raw) return "";
+  var BEZIRK_CENTER = {
+    "Mitte": ["52.520", "13.385"],
+    "Friedrichshain-Kreuzberg": ["52.502", "13.430"],
+    "Pankow": ["52.570", "13.420"],
+    "Charlottenburg-Wilmersdorf": ["52.505", "13.290"],
+    "Spandau": ["52.535", "13.200"],
+    "Steglitz-Zehlendorf": ["52.435", "13.260"],
+    "Tempelhof-Schöneberg": ["52.470", "13.380"],
+    "Neukölln": ["52.440", "13.440"],
+    "Treptow-Köpenick": ["52.445", "13.575"],
+    "Marzahn-Hellersdorf": ["52.535", "13.590"],
+    "Lichtenberg": ["52.530", "13.500"],
+    "Reinickendorf": ["52.590", "13.320"]
+  };
+
+  function cleanAreaName(raw) {
+    return normName(raw).replace(/^(bezirk|ortsteil|berlin) /, "").replace(/ berlin$/, "").trim();
+  }
+
+  function lookupBezirk(raw) {
+    var r = String(raw || "").trim();
+    if (!r) return "";
     if (!bezirkLookup) {
       bezirkLookup = {};
       for (var b in BEZIRK_OT) {
@@ -1595,9 +1614,18 @@
         for (var i = 0; i < BEZIRK_OT[b].length; i++) bezirkLookup[normName(BEZIRK_OT[b][i])] = b;
       }
     }
-    var nn = normName(raw).replace(/^(bezirk|ortsteil|berlin) /, "").replace(/ berlin$/, "").trim();
+    var nn = cleanAreaName(r);
     if (!nn || nn === "berlin") return "";
-    if (bezirkLookup[nn]) return bezirkLookup[nn];
+    return bezirkLookup[nn] || "";
+  }
+
+  function bezirkOf(v) {
+    var raw = v && typeof v.area === "string" ? v.area.trim() : "";
+    if (!raw) return "";
+    var known = lookupBezirk(raw);
+    if (known) return known;
+    var nn = cleanAreaName(raw);
+    if (!nn || nn === "berlin") return "";
     return /^[A-Za-zÄÖÜäöüß0-9 .'-]{2,40}$/.test(raw) ? raw : "";
   }
 
@@ -1636,13 +1664,18 @@
     areaEl.value = areaSel;
   }
 
-  function setAreaFilter(val) {
+  function setAreaFilter(val, noSuggest) {
     areaSel = val;
     try { localStorage.setItem("bsh_area", val); } catch (e) {}
     updateAreaOptions();
     applyFilter();
     renderDash();
     updateMap();
+    if (!noSuggest && !selected && searchEl.value.trim().length >= 2) {
+      suggestState = "loading";
+      renderSuggest();
+      fetchSuggestions(searchEl.value);
+    }
   }
 
   try { areaSel = localStorage.getItem("bsh_area") || ""; } catch (e) { areaSel = ""; }
@@ -1763,7 +1796,7 @@
     });
   }
 
-  function parseFeatures(json) {
+  function parseFeatures(json, bezirkFilter) {
     var out = [];
     var seen = {};
     var fs = json && json.features;
@@ -1789,6 +1822,15 @@
       var key = "osm-" + osm;
       var nkey = normName(name) + "|" + lat.toFixed(2) + "|" + lon.toFixed(2);
       if (seen[key] || seen[nkey]) continue;
+      var cands = [p.district, p.locality, p.suburb, p.city, p.county].filter(function (c) {
+        return typeof c === "string" && c.trim() !== "";
+      });
+      var mapped = "";
+      for (var ci = 0; ci < cands.length; ci++) {
+        if (lookupBezirk(cands[ci])) { mapped = cands[ci]; break; }
+      }
+      var bezirk = mapped ? lookupBezirk(mapped) : "";
+      if (bezirkFilter && bezirk !== bezirkFilter) continue;
       seen[key] = true;
       seen[nkey] = true;
       out.push({
@@ -1797,7 +1839,7 @@
         name: name,
         lat: Math.round(lat * 100000) / 100000,
         lon: Math.round(lon * 100000) / 100000,
-        area: String(p.district || p.locality || p.suburb || p.city || "").slice(0, 80),
+        area: String(mapped || cands[0] || "").trim().slice(0, 80),
         kind: LEISURE_KINDS[p.osm_value],
         sports: defaultSports(LEISURE_KINDS[p.osm_value], name)
       });
@@ -1815,7 +1857,8 @@
       updateMap();
       return;
     }
-    var ck = q.toLowerCase();
+    var bzFilter = BEZIRK_OT.hasOwnProperty(areaSel) ? areaSel : "";
+    var ck = q.toLowerCase() + "|" + bzFilter;
     if (sugCache[ck]) {
       suggestions = sugCache[ck];
       suggestState = suggestions.length ? "ok" : "empty";
@@ -1838,15 +1881,19 @@
       biasLat = userPos.lat.toFixed(2);
       biasLon = userPos.lon.toFixed(2);
     }
+    if (bzFilter && BEZIRK_CENTER[bzFilter]) {
+      biasLat = BEZIRK_CENTER[bzFilter][0];
+      biasLon = BEZIRK_CENTER[bzFilter][1];
+    }
     var url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) +
-      "&limit=15&lang=de&lat=" + biasLat + "&lon=" + biasLon + "&bbox=" + BERLIN.minLon + "," + BERLIN.minLat + "," +
+      "&limit=" + (bzFilter ? 40 : 15) + "&lang=de&lat=" + biasLat + "&lon=" + biasLon + "&bbox=" + BERLIN.minLon + "," + BERLIN.minLat + "," +
       BERLIN.maxLon + "," + BERLIN.maxLat + "&osm_tag=leisure";
     fetch(url).then(function (r) {
       if (!r.ok) throw new Error("http");
       return r.json();
     }).then(function (j) {
       if (seq !== sugSeq) return;
-      var list = parseFeatures(j);
+      var list = parseFeatures(j, bzFilter);
       sugCache[ck] = list;
       suggestions = list;
       suggestState = list.length ? "ok" : "empty";
@@ -1881,7 +1928,9 @@
     } else if (suggestState === "empty") {
       var em = document.createElement("div");
       em.className = "sug-info";
-      em.textContent = "Keinen passenden Park oder Sportplatz in Berlin gefunden. Es können nur echte Orte aktiviert werden.";
+      em.textContent = BEZIRK_OT.hasOwnProperty(areaSel)
+        ? "Keinen passenden Park oder Sportplatz in " + areaSel + " gefunden. Wähle oben \"Alle Bezirke\", um in ganz Berlin zu suchen."
+        : "Keinen passenden Park oder Sportplatz in Berlin gefunden. Es können nur echte Orte aktiviert werden.";
       box.appendChild(em);
     } else {
       for (var i = 0; i < suggestions.length; i++) {
@@ -2012,7 +2061,7 @@
       }
       toast(committed ? "Platz aktiviert! Jetzt für alle sichtbar. ✅" : "Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
       selected = null;
-      if (areaSel) setAreaFilter("");
+      if (areaSel) setAreaFilter("", true);
       searchEl.value = sel.name;
       renderCreate();
       applyFilter();
