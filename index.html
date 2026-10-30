@@ -210,11 +210,19 @@
     display: block; width: 100%; margin-top: 10px; padding: 12px; font-family: inherit; font-size: 15px;
     font-weight: 700; color: #ffffff; background: #10b981; border: none; border-radius: 12px; cursor: pointer;
   }
-  .map-toggle {
-    display: block; width: 100%; margin-top: 14px; padding: 12px 16px; text-align: left;
+  .toolrow { display: flex; gap: 10px; margin-top: 14px; }
+  .tool-btn {
+    flex: 1; min-width: 0; padding: 12px 10px; text-align: center;
     font-family: inherit; font-size: 15px; font-weight: 700; color: #c9ced4;
     background: #2f3338; border: 2px solid #3a3f46; border-radius: 16px; cursor: pointer;
   }
+  .tool-btn.on { color: #ffffff; background: #10b981; border-color: #10b981; }
+  .dist { margin: -6px 0 10px 0; font-size: 13px; font-weight: 600; color: #5b636c; }
+  .wx {
+    margin-bottom: 10px; padding: 8px 12px; background: #eaf3ff; color: #1e3a5f;
+    border-radius: 12px; font-size: 14px; font-weight: 700; line-height: 1.4;
+  }
+  .wx.rain { background: #fff3e0; color: #8a4b00; }
   #map { height: 280px; margin-top: 10px; border: 2px solid #3a3f46; border-radius: 16px; overflow: hidden; }
   .map-legend { margin-top: 6px; font-size: 12px; line-height: 1.4; color: #9aa0a8; }
   .map-hint { margin-top: 6px; font-size: 13px; line-height: 1.4; color: #f59e0b; }
@@ -233,7 +241,10 @@
   <input id="search" class="search" type="text" placeholder="Such deinen lokalen Bolzplatz oder Park..." autocomplete="off" autocapitalize="words">
   <div id="suggest"></div>
   <div id="createArea"></div>
-  <button type="button" class="map-toggle" id="mapToggle" style="display:none">🗺️ Karte anzeigen</button>
+  <div class="toolrow">
+    <button type="button" class="tool-btn" id="nearBtn">📍 In meiner Nähe</button>
+    <button type="button" class="tool-btn" id="mapToggle" style="display:none">🗺️ Karte anzeigen</button>
+  </div>
   <div id="mapWrap" style="display:none">
     <div id="map"></div>
     <div class="map-legend">🟢 aktivierte Plätze · 🔵 Vorschläge zur Suche · 🟠 deine Auswahl. Tippe einen Punkt an.</div>
@@ -300,6 +311,10 @@
   var mapObj = null;
   var mapLayer = null;
   var mapOpen = false;
+  var nearBtn = document.getElementById("nearBtn");
+  var userPos = null;
+  var nearOn = false;
+  var wx = { data: null, fetchedAt: 0, loading: false };
   var connEl = document.getElementById("conn");
   var connText = document.getElementById("connText");
   var toastEl = document.getElementById("toast");
@@ -820,11 +835,13 @@
 
     card.innerHTML =
       '<h2></h2>' +
+      '<div class="dist" style="display:none"></div>' +
       '<div class="sports">' + sportsHtml + '</div>' +
       '<div class="live" style="display:none"></div>' +
       '<div class="status">Aktuell <b class="pl">0</b> Spieler angemeldet</div>' +
       '<div class="timerow"><label>📅 Tag</label><select class="dsel"></select></div>' +
       '<div class="timerow"><label>🕒 Uhrzeit</label><select class="tsel">' + timeHtml + '</select></div>' +
+      '<div class="wx" style="display:none"></div>' +
       '<button type="button" class="join">Ich bin dabei</button>' +
       '<button type="button" class="share">🔗 Spiel auf WhatsApp teilen</button>' +
       '<div class="hist" style="display:none"></div>' +
@@ -843,6 +860,8 @@
       sportBtns: card.querySelectorAll(".sport"),
       pl: card.querySelector(".pl"),
       liveEl: card.querySelector(".live"),
+      distEl: card.querySelector(".dist"),
+      wxEl: card.querySelector(".wx"),
       dsel: card.querySelector(".dsel"),
       tsel: card.querySelector(".tsel"),
       joinBtn: card.querySelector(".join"),
@@ -914,6 +933,7 @@
         });
       } else {
         c[field] = value;
+        renderWx(c);
       }
     }
 
@@ -1115,12 +1135,18 @@
     c.liveEl.style.display = live ? "" : "none";
     c.liveEl.textContent = live ? "🟢 Session läuft gerade (seit " + s.time + " Uhr)" : "";
 
+    var dtxt = distText(v);
+    c.distEl.style.display = dtxt ? "" : "none";
+    c.distEl.textContent = dtxt ? "📍 " + dtxt + " von dir entfernt" : "";
+    renderWx(c);
+
     var joinedNow = isJoined(c.key, c.sport);
     c.joinBtn.className = "join" + (joinedNow ? " leave" : "");
     c.joinBtn.textContent = joinedNow ? "Absagen" : "Ich bin dabei";
   }
 
   function refreshAll() {
+    fetchWeather(false);
     for (var k in cards) {
       if (cards.hasOwnProperty(k) && data[k]) updateCard(cards[k], data[k]);
     }
@@ -1193,6 +1219,14 @@
         main.appendChild(nm);
         main.appendChild(sub);
 
+        var dashDist = distText(v);
+        if (dashDist) sub.textContent += " · " + dashDist;
+        var dashWx = wxFor(it.s.date, it.s.time);
+        if (dashWx) {
+          sub.textContent += " · " + wxInfo(dashWx.c)[0] + " " + dashWx.t + " °C";
+          if (dashWx.p !== null && dashWx.p >= 60) sub.textContent += " · ☔ " + dashWx.p + " %";
+        }
+
         var cnt = document.createElement("span");
         cnt.className = "dash-count";
         cnt.textContent = "👥 " + it.s.players;
@@ -1227,12 +1261,22 @@
       if (q || inMainView(v)) { main.push(k); } else { arch.push(k); }
     }
     main.sort(function (a, b) {
+      if (nearOn && userPos) {
+        var da = distTo(data[a]);
+        var db2 = distTo(data[b]);
+        if (da !== db2) return da < db2 ? -1 : 1;
+      }
       var fa = firstStart(data[a]);
       var fb = firstStart(data[b]);
       if (fa !== fb) return fa < fb ? -1 : 1;
       return (data[b].createdAt || 0) - (data[a].createdAt || 0);
     });
     arch.sort(function (a, b) {
+      if (nearOn && userPos) {
+        var da = distTo(data[a]);
+        var db2 = distTo(data[b]);
+        if (da !== db2) return da < db2 ? -1 : 1;
+      }
       return (data[b].createdAt || 0) - (data[a].createdAt || 0);
     });
     placeInto(listEl, main);
@@ -1307,6 +1351,147 @@
     return false;
   }
 
+  function fmtDist(km) {
+    if (km < 1) return Math.max(10, Math.round(km * 100) * 10) + " m";
+    if (km < 10) return km.toFixed(1).replace(".", ",") + " km";
+    return Math.round(km) + " km";
+  }
+
+  function distTo(v) {
+    if (!userPos || !v || typeof v.lat !== "number" || typeof v.lon !== "number") return Infinity;
+    return distKm(userPos.lat, userPos.lon, v.lat, v.lon);
+  }
+
+  function distText(v) {
+    var d = distTo(v);
+    return isFinite(d) ? fmtDist(d) : "";
+  }
+
+  function setNear(on) {
+    nearOn = on;
+    if (!on) userPos = null;
+    nearBtn.className = "tool-btn" + (on ? " on" : "");
+    nearBtn.textContent = on ? "📍 In meiner Nähe ✓" : "📍 In meiner Nähe";
+    try { localStorage.setItem("bsh_near", on ? "1" : "0"); } catch (e) {}
+    refreshAll();
+    updateMap();
+  }
+
+  function askLocation(auto) {
+    if (!navigator.geolocation) {
+      if (!auto) toast("Dein Browser unterstützt keine Standortabfrage.");
+      return;
+    }
+    nearBtn.textContent = "📍 Suche Standort ...";
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      userPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      setNear(true);
+      if (!auto) toast("Plätze nach Entfernung sortiert. Dein Standort bleibt auf deinem Handy.");
+    }, function (err) {
+      setNear(false);
+      if (!auto) {
+        toast(err && err.code === 1
+          ? "Standort nicht erlaubt. Erlaube ihn in den Browser-Einstellungen für diese Seite."
+          : "Standort konnte nicht ermittelt werden. Bitte versuche es nochmal.");
+      }
+    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  }
+
+  nearBtn.addEventListener("click", function () {
+    if (nearOn) { setNear(false); } else { askLocation(false); }
+  });
+
+  try {
+    if (localStorage.getItem("bsh_near") === "1" && navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "geolocation" }).then(function (st) {
+        if (st.state === "granted") askLocation(true);
+      }).catch(function () {});
+    }
+  } catch (e) {}
+
+  function wxInfo(code) {
+    if (code === 0) return ["☀️", "sonnig"];
+    if (code === 1) return ["🌤️", "überwiegend sonnig"];
+    if (code === 2) return ["⛅", "leicht bewölkt"];
+    if (code === 3) return ["☁️", "bewölkt"];
+    if (code === 45 || code === 48) return ["🌫️", "Nebel"];
+    if (code >= 51 && code <= 57) return ["🌦️", "Nieselregen"];
+    if (code === 80) return ["🌦️", "Regenschauer"];
+    if (code >= 61 && code <= 67) return ["🌧️", "Regen"];
+    if (code === 81 || code === 82) return ["🌧️", "Starke Schauer"];
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ["❄️", "Schnee"];
+    if (code >= 95 && code <= 99) return ["⛈️", "Gewitter"];
+    return ["🌡️", "Wetter"];
+  }
+
+  function wxKey(date, time) {
+    var tp = String(time).split(":");
+    var hh = parseInt(tp[0], 10);
+    var mi = parseInt(tp[1], 10);
+    var day = date;
+    if (isNaN(hh)) return "";
+    if (!isNaN(mi) && mi >= 30) hh += 1;
+    if (hh >= 24) { hh = 0; day = addDays(date, 1); }
+    return day + "T" + pad(hh) + ":00";
+  }
+
+  function wxFor(date, time) {
+    if (!wx.data || !date || !time) return null;
+    return wx.data[wxKey(date, time)] || null;
+  }
+
+  function renderWx(c) {
+    var w = wxFor(c.date, c.time);
+    if (!w) {
+      c.wxEl.style.display = "none";
+      c.wxEl.textContent = "";
+      return;
+    }
+    var info = wxInfo(w.c);
+    var txt = info[0] + " " + info[1] + " · " + w.t + " °C";
+    if (w.p !== null) txt += " · Regenrisiko " + w.p + " %";
+    c.wxEl.textContent = "Wetter um " + c.time + " Uhr: " + txt;
+    c.wxEl.className = "wx" + (w.p !== null && w.p >= 60 ? " rain" : "");
+    c.wxEl.style.display = "";
+  }
+
+  function fetchWeather(force) {
+    if (wx.loading) return;
+    if (!force && wx.data && Date.now() - wx.fetchedAt < 30 * 60 * 1000) return;
+    if (typeof fetch !== "function") return;
+    wx.loading = true;
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.405" +
+      "&hourly=temperature_2m,precipitation_probability,weather_code&timezone=Europe%2FBerlin&forecast_days=8";
+    fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("http");
+      return r.json();
+    }).then(function (j) {
+      var h = j && j.hourly;
+      if (!h || !Array.isArray(h.time)) throw new Error("format");
+      var map = {};
+      for (var i = 0; i < h.time.length; i++) {
+        var t = h.temperature_2m ? h.temperature_2m[i] : null;
+        if (typeof t !== "number") continue;
+        var p = h.precipitation_probability ? h.precipitation_probability[i] : null;
+        map[h.time[i]] = {
+          t: Math.round(t),
+          p: typeof p === "number" ? Math.round(p) : null,
+          c: h.weather_code ? h.weather_code[i] : -1
+        };
+      }
+      wx.data = map;
+      wx.fetchedAt = Date.now();
+      wx.loading = false;
+      for (var k in cards) {
+        if (cards.hasOwnProperty(k)) renderWx(cards[k]);
+      }
+      renderDash();
+    }).catch(function () {
+      wx.loading = false;
+      wx.fetchedAt = Date.now() - 25 * 60 * 1000;
+    });
+  }
+
   function parseFeatures(json) {
     var out = [];
     var seen = {};
@@ -1374,8 +1559,14 @@
     suggestState = "loading";
     renderSuggest();
     var seq = ++sugSeq;
+    var biasLat = "52.52";
+    var biasLon = "13.405";
+    if (userPos && userPos.lat >= BERLIN.minLat && userPos.lat <= BERLIN.maxLat && userPos.lon >= BERLIN.minLon && userPos.lon <= BERLIN.maxLon) {
+      biasLat = userPos.lat.toFixed(2);
+      biasLon = userPos.lon.toFixed(2);
+    }
     var url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) +
-      "&limit=15&lang=de&lat=52.52&lon=13.405&bbox=" + BERLIN.minLon + "," + BERLIN.minLat + "," +
+      "&limit=15&lang=de&lat=" + biasLat + "&lon=" + biasLon + "&bbox=" + BERLIN.minLon + "," + BERLIN.minLat + "," +
       BERLIN.maxLon + "," + BERLIN.maxLat + "&osm_tag=leisure";
     fetch(url).then(function (r) {
       if (!r.ok) throw new Error("http");
@@ -1432,7 +1623,8 @@
           nm.textContent = "📍 " + s.name;
           var sub = document.createElement("span");
           sub.className = "sug-sub";
-          sub.textContent = s.kind + (s.area ? " · " + s.area : "");
+          sub.textContent = s.kind + (s.area ? " · " + s.area : "") +
+            (userPos ? " · " + fmtDist(distKm(userPos.lat, userPos.lon, s.lat, s.lon)) : "");
           main.appendChild(nm);
           main.appendChild(sub);
           var badge = document.createElement("span");
@@ -1583,6 +1775,13 @@
       sm.addTo(mapLayer);
       pts = [[selected.lat, selected.lon]];
     }
+    var placesCount = known.length;
+    if (userPos) {
+      var um = L.circleMarker([userPos.lat, userPos.lon], { radius: 7, color: "#6d28d9", weight: 2, fillColor: "#a78bfa", fillOpacity: 0.9 });
+      um.bindTooltip(makeTip("Du bist hier"));
+      um.addTo(mapLayer);
+      if (nearOn) known.push([userPos.lat, userPos.lon]);
+    }
     if (pts.length > 0) {
       try { mapObj.fitBounds(pts, { padding: [30, 30], maxZoom: 15 }); } catch (e) {}
     } else if (known.length > 0) {
@@ -1591,7 +1790,7 @@
     var hintEl = document.getElementById("mapHint");
     if (hintEl) {
       var msg = "";
-      if (known.length === 0 && pts.length === 0) {
+      if (placesCount === 0 && pts.length === 0) {
         msg = "Noch keine Plätze auf der Karte. Suche oben nach einem Park oder Bolzplatz und wähle ihn aus, dann erscheint er hier.";
       } else if (legacy > 0) {
         msg = legacy + (legacy === 1 ? " älterer Platz hat" : " ältere Plätze haben") + " keinen Standort und " + (legacy === 1 ? "erscheint" : "erscheinen") + " nicht auf der Karte.";
