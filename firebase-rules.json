@@ -236,6 +236,16 @@
           }
         }
       }
+    },
+    "stats": {
+      ".read": true,
+      "$date": {
+        ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)",
+        "$field": {
+          ".write": "newData.isNumber() && newData.val() == (data.exists() ? data.val() + 1 : 1)",
+          ".validate": "$field == 'visits' || $field == 'newUsers' || $field == 'returning' || $field == 'joins' || $field == 'places' || $field == 'accounts'"
+        }
+      }
     }
   }
 }

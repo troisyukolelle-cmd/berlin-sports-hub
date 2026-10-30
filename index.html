@@ -801,9 +801,106 @@
     }
   });
 
+  var statsStarted = false;
+  function bump(field) {
+    try {
+      db.ref("stats/" + todayStr() + "/" + field).transaction(function (v) { return (typeof v === "number" ? v : 0) + 1; }, function () {}, false);
+    } catch (e) {}
+  }
+
+  function countVisit() {
+    var today = todayStr();
+    var last = "", first = "";
+    try { last = localStorage.getItem("bsh_lastvisit") || ""; first = localStorage.getItem("bsh_firstvisit") || ""; } catch (e) {}
+    if (last === today) return;
+    bump("visits");
+    if (!first) {
+      bump("newUsers");
+      try { localStorage.setItem("bsh_firstvisit", today); } catch (e) {}
+    } else if (first !== today) {
+      bump("returning");
+    }
+    try { localStorage.setItem("bsh_lastvisit", today); } catch (e) {}
+  }
+
+  function showStats() {
+    var panel = document.createElement("div");
+    panel.className = "acc-panel";
+    var inner = document.createElement("div");
+    inner.className = "acc-inner";
+    var head = document.createElement("div");
+    head.className = "acc-head";
+    var title = document.createElement("div");
+    title.className = "acc-title";
+    title.textContent = "Statistik";
+    head.appendChild(title);
+    inner.appendChild(head);
+    var card = document.createElement("div");
+    card.className = "acc-card";
+    card.textContent = "Lade...";
+    inner.appendChild(card);
+    panel.appendChild(inner);
+    document.body.appendChild(panel);
+    db.ref("stats").orderByKey().limitToLast(30).once("value").then(function (snap) {
+      var rows = [];
+      snap.forEach(function (ch) { rows.unshift([ch.key, ch.val() || {}]); });
+      card.textContent = "";
+      var cols = [["visits", "Besucher"], ["newUsers", "Neu"], ["returning", "Wieder da"], ["joins", "Anmeldungen zum Spiel"], ["places", "Neue Plätze"], ["accounts", "Neue Konten"]];
+      var tbl = document.createElement("table");
+      tbl.style.cssText = "width:100%;border-collapse:collapse;font-size:13px;color:#fff";
+      var tr = document.createElement("tr");
+      [["", "Tag"]].concat(cols).forEach(function (c) {
+        var th = document.createElement("th");
+        th.textContent = c[1];
+        th.style.cssText = "text-align:left;padding:4px 6px;border-bottom:1px solid #3a3f46;color:#9aa0a8";
+        tr.appendChild(th);
+      });
+      tbl.appendChild(tr);
+      var sum = {};
+      rows.forEach(function (r) {
+        var row = document.createElement("tr");
+        var td = document.createElement("td");
+        td.textContent = r[0].slice(5);
+        td.style.cssText = "padding:4px 6px";
+        row.appendChild(td);
+        cols.forEach(function (c) {
+          var v = typeof r[1][c[0]] === "number" ? r[1][c[0]] : 0;
+          sum[c[0]] = (sum[c[0]] || 0) + v;
+          var d = document.createElement("td");
+          d.textContent = String(v);
+          d.style.cssText = "padding:4px 6px";
+          row.appendChild(d);
+        });
+        tbl.appendChild(row);
+      });
+      var tot = document.createElement("tr");
+      var tl = document.createElement("td");
+      tl.textContent = "Summe";
+      tl.style.cssText = "padding:6px;font-weight:800;border-top:1px solid #3a3f46";
+      tot.appendChild(tl);
+      cols.forEach(function (c) {
+        var d = document.createElement("td");
+        d.textContent = String(sum[c[0]] || 0);
+        d.style.cssText = "padding:6px;font-weight:800;border-top:1px solid #3a3f46";
+        tot.appendChild(d);
+      });
+      tbl.appendChild(tot);
+      card.appendChild(tbl);
+      var note = document.createElement("p");
+      note.className = "acc-note";
+      note.textContent = "Besucher = Geräte pro Tag. Zähler sind anonym und ungefähr.";
+      card.appendChild(note);
+    }).catch(function () { card.textContent = "Keine Berechtigung oder Fehler."; });
+  }
+
   db.ref(".info/serverTimeOffset").on("value", function (snap) {
     var o = snap.val();
     serverOffset = typeof o === "number" ? o : 0;
+    if (!statsStarted) {
+      statsStarted = true;
+      countVisit();
+      if (/[?&]stats(=|&|$)/.test(window.location.search)) showStats();
+    }
     refreshAll();
   });
 
@@ -1117,6 +1214,7 @@
         if (expiredOld) archiveSession(key, sp, expiredOld);
         var val = snap && snap.val();
         if (!wasJoined && val) joined[tk] = String(val.sid || 0);
+        if (!wasJoined && val) bump("joins");
         if (authUser && profile) {
           if (!wasJoined && val) {
             var pk = key + "_" + sp + "_" + (val.sid || 0);
@@ -2179,6 +2277,7 @@
         renderCreate();
         return;
       }
+      if (committed) bump("places");
       toast(committed ? "Platz aktiviert! Jetzt für alle sichtbar. ✅" : "Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
       selected = null;
       if (areaSel) setAreaFilter("", true);
@@ -2507,7 +2606,7 @@
       var code = randomCode();
       db.ref("users/" + u.uid).set({ nick: nick, code: code }).then(function () {
         return db.ref("codes/" + code).set(u.uid);
-      }).then(function () { cb(null); }).catch(function (e) {
+      }).then(function () { bump("accounts"); cb(null); }).catch(function (e) {
         tries++;
         if (tries < 6) { attempt(); } else { cb(e); }
       });
