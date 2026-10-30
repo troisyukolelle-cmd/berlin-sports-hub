@@ -2475,17 +2475,20 @@
 
   function authErrorText(e) {
     var c = e && e.code ? String(e.code) : "";
-    if (c === "auth/email-already-in-use") return "Diese E-Mail-Adresse ist schon registriert. Melde dich stattdessen an.";
-    if (c === "auth/invalid-email") return "Bitte gib eine gültige E-Mail-Adresse ein.";
+    if (c === "auth/email-already-in-use") return "Dieser Benutzername ist schon vergeben. Nimm einen anderen oder melde dich an.";
+    if (c === "auth/invalid-email") return "Dieser Benutzername ist nicht möglich.";
     if (c === "auth/weak-password") return "Das Passwort ist zu schwach. Nimm mindestens 8 Zeichen.";
-    if (c === "auth/user-not-found" || c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/invalid-login-credentials") return "E-Mail oder Passwort stimmt nicht.";
+    if (c === "auth/user-not-found" || c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/invalid-login-credentials") return "Benutzername oder Passwort stimmt nicht.";
     if (c === "auth/too-many-requests") return "Zu viele Versuche. Bitte warte kurz und versuche es später nochmal.";
     if (c === "auth/network-request-failed") return "Keine Verbindung. Bitte prüfe dein Internet.";
-    if (c === "auth/operation-not-allowed") return "Die Anmeldung ist noch nicht freigeschaltet (Firebase: E-Mail/Passwort aktivieren).";
+    if (c === "auth/operation-not-allowed") return "Die Anmeldung ist noch nicht freigeschaltet (Firebase: E-Mail/Passwort aktivieren, das ist die Technik dahinter).";
     if (c === "auth/requires-recent-login") return "Bitte melde dich neu an und versuche es nochmal.";
     if (c === "PERMISSION_DENIED" || (e && /permission/i.test(String(e.message || "")))) return "Das ist nicht erlaubt. Bitte versuche es nochmal.";
     return "Das hat leider nicht geklappt. Bitte versuche es nochmal.";
   }
+
+  var USER_RE = /^[A-Za-z0-9_-]{2,20}$/;
+  function userEmail(name) { return name.toLowerCase() + "@users.berlinsportshub.app"; }
 
   function randomCode() {
     var chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -2624,11 +2627,8 @@
   function renderAuth() {
     accTitle.textContent = authMode === "signup" ? "Konto erstellen" : "Anmelden";
     var box = mk("div", "acc-card");
-    box.appendChild(mk("p", "acc-note", "Ein Konto ist freiwillig. Ohne Konto kannst du alles andere in der App weiter nutzen. Mit Konto kannst du Freunde hinzufügen und privat mit ihnen chatten."));
-    if (authMode === "signup") {
-      box.appendChild(accField("Spitzname (2 bis 20 Zeichen)", "text", draft.nick, function (v) { draft.nick = v; }, { maxlength: "20", autocomplete: "nickname" }));
-    }
-    box.appendChild(accField("E-Mail-Adresse", "email", draft.email, function (v) { draft.email = v; }, { autocomplete: "email", autocapitalize: "none", inputmode: "email" }));
+    box.appendChild(mk("p", "acc-note", "Ein Konto ist freiwillig. Ohne Konto kannst du alles andere in der App weiter nutzen. Du brauchst nur Benutzername und Passwort, keine E-Mail. Merk dir das Passwort gut, es kann nicht zurückgesetzt werden."));
+    box.appendChild(accField(authMode === "signup" ? "Benutzername (2 bis 20 Zeichen: Buchstaben, Zahlen, _ und -)" : "Benutzername", "text", draft.nick, function (v) { draft.nick = v; }, { maxlength: "20", autocomplete: "username", autocapitalize: "none" }));
     box.appendChild(accField(authMode === "signup" ? "Passwort (mindestens 8 Zeichen)" : "Passwort", "password", draft.pw, function (v) { draft.pw = v; }, { autocomplete: authMode === "signup" ? "new-password" : "current-password" }));
     if (authMode === "signup") {
       var chk = mk("label", "acc-check");
@@ -2637,7 +2637,7 @@
       cb.checked = !!draft.consent;
       cb.addEventListener("change", function () { draft.consent = cb.checked; });
       chk.appendChild(cb);
-      chk.appendChild(mk("span", "", "Ich bin einverstanden, dass meine E-Mail-Adresse und mein Spitzname für das Konto bei Google Firebase gespeichert werden. Ich kann mein Konto jederzeit selbst löschen."));
+      chk.appendChild(mk("span", "", "Ich bin einverstanden, dass mein Benutzername und mein Passwort (verschlüsselt) für das Konto bei Google Firebase gespeichert werden. Ich gebe keine E-Mail an, deshalb kann ich mein Passwort nicht zurücksetzen lassen. Ich kann mein Konto jederzeit selbst löschen."));
       box.appendChild(chk);
     }
     var main = accButton(authMode === "signup" ? "Konto erstellen" : "Anmelden", "", authMode === "signup" ? doSignUp : doLogin);
@@ -2647,7 +2647,6 @@
       authMode = authMode === "signup" ? "login" : "signup";
       renderAcc();
     }));
-    if (authMode === "login") box.appendChild(accButton("Passwort vergessen?", "ghost", doReset));
     accBody.appendChild(box);
   }
 
@@ -2655,13 +2654,13 @@
     var nick = draft.nick.trim().replace(/\s+/g, " ");
     var np = nickProblem(nick);
     if (np) { toast(np); return; }
-    if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) { toast("Bitte gib eine gültige E-Mail-Adresse ein."); return; }
+    if (!USER_RE.test(nick)) { toast("Der Benutzername darf nur Buchstaben, Zahlen, _ und - enthalten."); return; }
     if ((draft.pw || "").length < 8) { toast("Das Passwort braucht mindestens 8 Zeichen."); return; }
     if (!draft.consent) { toast("Bitte stimme der Speicherung deiner Daten zu."); return; }
     accBusy = true;
     profileCreating = true;
     renderAcc();
-    auth.createUserWithEmailAndPassword(draft.email.trim(), draft.pw).then(function () {
+    auth.createUserWithEmailAndPassword(userEmail(nick), draft.pw).then(function () {
       return new Promise(function (res, rej) {
         createProfile(nick, function (e) { if (e) { rej(e); } else { res(); } });
       });
@@ -2682,11 +2681,12 @@
   }
 
   function doLogin() {
-    if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) { toast("Bitte gib deine E-Mail-Adresse ein."); return; }
+    var uname = draft.nick.trim();
+    if (!USER_RE.test(uname)) { toast("Bitte gib deinen Benutzernamen ein."); return; }
     if (!draft.pw) { toast("Bitte gib dein Passwort ein."); return; }
     accBusy = true;
     renderAcc();
-    auth.signInWithEmailAndPassword(draft.email.trim(), draft.pw).then(function () {
+    auth.signInWithEmailAndPassword(userEmail(uname), draft.pw).then(function () {
       accBusy = false;
       draft.pw = "";
       accView = "home";
@@ -2697,13 +2697,6 @@
       renderAcc();
       toast(authErrorText(e));
     });
-  }
-
-  function doReset() {
-    if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) { toast("Bitte gib zuerst deine E-Mail-Adresse ein."); return; }
-    auth.sendPasswordResetEmail(draft.email.trim()).then(function () {
-      toast("Wir haben dir eine E-Mail zum Zurücksetzen geschickt (auch im Spam-Ordner nachsehen).");
-    }).catch(function (e) { toast(authErrorText(e)); });
   }
 
   function renderSetup() {
@@ -2921,7 +2914,7 @@
     var card = mk("div", "acc-card");
     card.appendChild(mk("h3", "", "Dein Profil"));
     card.appendChild(mk("div", "acc-name", profile.nick));
-    card.appendChild(mk("p", "acc-note", authUser.email || ""));
+    card.appendChild(mk("p", "acc-note", "Benutzername: " + String(authUser.email || "").split("@")[0]));
     card.appendChild(accButton("Spitzname ändern", "ghost", function () {
       var input = window.prompt("Neuer Spitzname (2 bis 20 Zeichen):", profile.nick);
       if (input === null) return;
