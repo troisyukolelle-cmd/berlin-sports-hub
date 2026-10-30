@@ -217,6 +217,12 @@
     background: #2f3338; border: 2px solid #3a3f46; border-radius: 16px; cursor: pointer;
   }
   .tool-btn.on { color: #ffffff; background: #10b981; border-color: #10b981; }
+  .arearow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .arearow label { flex-shrink: 0; font-size: 14px; font-weight: 700; color: #c9ced4; }
+  .arearow select {
+    flex: 1; min-width: 0; padding: 10px 12px; font-size: 16px; color: #ffffff;
+    background: #2f3338; border: 2px solid #3a3f46; border-radius: 14px;
+  }
   .nick-btn {
     display: block; width: 100%; margin-top: 10px; padding: 10px 14px; text-align: left;
     font-family: inherit; font-size: 14px; font-weight: 600; color: #c9ced4;
@@ -250,6 +256,10 @@
     <button type="button" class="tool-btn" id="nearBtn">📍 In meiner Nähe</button>
     <button type="button" class="tool-btn" id="mapToggle" style="display:none">🗺️ Karte anzeigen</button>
   </div>
+  <div class="arearow" id="areaRow" style="display:none">
+    <label for="areaSel">🏙️ Bezirk</label>
+    <select id="areaSel"><option value="">Alle Bezirke</option></select>
+  </div>
   <button type="button" class="nick-btn" id="nickBtn">👤 Spitzname: Anonym · ändern</button>
   <div id="mapWrap" style="display:none">
     <div id="map"></div>
@@ -257,7 +267,7 @@
     <div class="map-hint" id="mapHint"></div>
   </div>
   <div class="dash">
-    <h2>🔥 Aktive Suchen in Berlin</h2>
+    <h2 id="dashTitle">🔥 Aktive Suchen in Berlin</h2>
     <div id="dashList"></div>
   </div>
   <div id="list"></div>
@@ -320,6 +330,10 @@
   var nearBtn = document.getElementById("nearBtn");
   var nickBtn = document.getElementById("nickBtn");
   var myNick = "";
+  var areaSel = "";
+  var areaEl = document.getElementById("areaSel");
+  var areaRow = document.getElementById("areaRow");
+  var dashTitle = document.getElementById("dashTitle");
   var userPos = null;
   var nearOn = false;
   var wx = { data: null, fetchedAt: 0, loading: false };
@@ -1168,8 +1182,12 @@
     c.liveEl.textContent = live ? "🟢 Session läuft gerade (seit " + s.time + " Uhr)" : "";
 
     var dtxt = distText(v);
-    c.distEl.style.display = dtxt ? "" : "none";
-    c.distEl.textContent = dtxt ? "📍 " + dtxt + " von dir entfernt" : "";
+    var bz = bezirkOf(v);
+    var infoParts = [];
+    if (bz) infoParts.push(bz);
+    if (dtxt) infoParts.push(dtxt + " von dir entfernt");
+    c.distEl.style.display = infoParts.length ? "" : "none";
+    c.distEl.textContent = infoParts.length ? "📍 " + infoParts.join(" · ") : "";
     renderWx(c);
 
     var joinedNow = isJoined(c.key, c.sport);
@@ -1190,6 +1208,7 @@
   function jumpToPlace(key, sportId) {
     var pv = data[key];
     if (!pv) return;
+    if (areaSel && !areaOk(pv)) setAreaFilter("");
     searchEl.value = inMainView(pv) ? "" : pv.name;
     selected = null;
     sugSeq++;
@@ -1210,9 +1229,11 @@
   }
 
   function renderDash() {
+    dashTitle.textContent = "🔥 Aktive Suchen in " + (areaSel || "Berlin");
     var items = [];
     for (var k in data) {
       if (!data.hasOwnProperty(k)) continue;
+      if (!areaOk(data[k])) continue;
       for (var i = 0; i < SPORTS.length; i++) {
         var s = sess(data[k], SPORTS[i].id);
         if (isActive(s)) {
@@ -1288,7 +1309,7 @@
       if (!cards.hasOwnProperty(k)) continue;
       total++;
       var v = data[k];
-      var match = !!v && (!q || norm(v.name).indexOf(q) !== -1);
+      var match = !!v && (!q || norm(v.name).indexOf(q) !== -1) && areaOk(v);
       if (!match) { rest.push(k); continue; }
       if (q || inMainView(v)) { main.push(k); } else { arch.push(k); }
     }
@@ -1327,7 +1348,15 @@
     if (total === 0) {
       emptyArea.innerHTML = '<div class="empty"><span class="big">🏟️</span>Noch nichts los hier.<br>Tippe oben den Namen eines Parks oder Bolzplatzes ein und wähle ihn aus der Liste.</div>';
     } else if (q && main.length === 0) {
-      emptyArea.innerHTML = '<div class="empty">Noch kein aktivierter Platz mit diesem Namen.<br>Wähle ihn oben aus der Liste, um ihn zu aktivieren.</div>';
+      emptyArea.innerHTML = '<div class="empty">Noch kein aktivierter Platz mit diesem Namen' + (areaSel ? ' in diesem Bezirk' : '') + '.<br>Wähle ihn oben aus der Liste, um ihn zu aktivieren.</div>';
+    } else if (!q && main.length === 0 && areaSel) {
+      emptyArea.innerHTML = "";
+      var emptyBox = document.createElement("div");
+      emptyBox.className = "empty";
+      emptyBox.appendChild(document.createTextNode("In " + areaSel + " ist gerade nichts los."));
+      emptyBox.appendChild(document.createElement("br"));
+      emptyBox.appendChild(document.createTextNode("Wähle oben \"Alle Bezirke\" oder such einen Platz."));
+      emptyArea.appendChild(emptyBox);
     } else if (!q && main.length === 0) {
       emptyArea.innerHTML = '<div class="empty">Aktuell läuft kein Spiel.<br>Such deinen Platz oben oder öffne das Archiv.</div>';
     } else {
@@ -1440,6 +1469,90 @@
       }).catch(function () {});
     }
   } catch (e) {}
+
+  var BEZIRK_OT = {
+    "Mitte": ["Mitte", "Moabit", "Hansaviertel", "Tiergarten", "Wedding", "Gesundbrunnen"],
+    "Friedrichshain-Kreuzberg": ["Friedrichshain", "Kreuzberg"],
+    "Pankow": ["Pankow", "Prenzlauer Berg", "Weißensee", "Blankenburg", "Heinersdorf", "Karow", "Malchow",
+      "Blankenfelde", "Buch", "Französisch Buchholz", "Niederschönhausen", "Rosenthal", "Wilhelmsruh"],
+    "Charlottenburg-Wilmersdorf": ["Charlottenburg", "Wilmersdorf", "Schmargendorf", "Grunewald", "Westend",
+      "Charlottenburg-Nord", "Halensee"],
+    "Spandau": ["Spandau", "Haselhorst", "Siemensstadt", "Staaken", "Gatow", "Kladow", "Hakenfelde",
+      "Falkenhagener Feld", "Wilhelmstadt"],
+    "Steglitz-Zehlendorf": ["Steglitz", "Lichterfelde", "Lankwitz", "Zehlendorf", "Dahlem", "Nikolassee", "Wannsee"],
+    "Tempelhof-Schöneberg": ["Schöneberg", "Friedenau", "Tempelhof", "Mariendorf", "Marienfelde", "Lichtenrade"],
+    "Neukölln": ["Neukölln", "Britz", "Buckow", "Rudow", "Gropiusstadt"],
+    "Treptow-Köpenick": ["Treptow", "Alt-Treptow", "Plänterwald", "Baumschulenweg", "Johannisthal", "Niederschöneweide",
+      "Altglienicke", "Adlershof", "Bohnsdorf", "Oberschöneweide", "Köpenick", "Friedrichshagen", "Rahnsdorf",
+      "Grünau", "Müggelheim", "Schmöckwitz"],
+    "Marzahn-Hellersdorf": ["Marzahn", "Biesdorf", "Kaulsdorf", "Mahlsdorf", "Hellersdorf"],
+    "Lichtenberg": ["Lichtenberg", "Friedrichsfelde", "Karlshorst", "Falkenberg", "Wartenberg", "Neu-Hohenschönhausen",
+      "Alt-Hohenschönhausen", "Hohenschönhausen", "Fennpfuhl", "Rummelsburg"],
+    "Reinickendorf": ["Reinickendorf", "Tegel", "Konradshöhe", "Heiligensee", "Frohnau", "Hermsdorf", "Waidmannslust",
+      "Lübars", "Wittenau", "Märkisches Viertel", "Borsigwalde"]
+  };
+  var bezirkLookup = null;
+
+  function bezirkOf(v) {
+    var raw = v && typeof v.area === "string" ? v.area.trim() : "";
+    if (!raw) return "";
+    if (!bezirkLookup) {
+      bezirkLookup = {};
+      for (var b in BEZIRK_OT) {
+        if (!BEZIRK_OT.hasOwnProperty(b)) continue;
+        bezirkLookup[normName(b)] = b;
+        for (var i = 0; i < BEZIRK_OT[b].length; i++) bezirkLookup[normName(BEZIRK_OT[b][i])] = b;
+      }
+    }
+    var nn = normName(raw).replace(/^(bezirk|ortsteil|berlin) /, "").replace(/ berlin$/, "").trim();
+    if (!nn || nn === "berlin") return "";
+    if (bezirkLookup[nn]) return bezirkLookup[nn];
+    return /^[A-Za-zÄÖÜäöüß0-9 .'-]{2,40}$/.test(raw) ? raw : "";
+  }
+
+  function areaOk(v) {
+    return !areaSel || bezirkOf(v) === areaSel;
+  }
+
+  function updateAreaOptions() {
+    var counts = {};
+    for (var k in data) {
+      if (!data.hasOwnProperty(k)) continue;
+      var b = bezirkOf(data[k]);
+      if (b) counts[b] = (counts[b] || 0) + 1;
+    }
+    if (areaSel && !counts.hasOwnProperty(areaSel)) counts[areaSel] = 0;
+    var names = Object.keys(counts).sort(function (a, c) { return a.localeCompare(c, "de"); });
+    var sig = names.map(function (n) { return n + ":" + counts[n]; }).join("|");
+    areaRow.style.display = names.length ? "" : "none";
+    if (areaEl.getAttribute("data-sig") !== sig) {
+      areaEl.innerHTML = "";
+      var all = document.createElement("option");
+      all.value = "";
+      all.textContent = "Alle Bezirke";
+      areaEl.appendChild(all);
+      for (var i = 0; i < names.length; i++) {
+        var o = document.createElement("option");
+        o.value = names[i];
+        o.textContent = names[i] + " (" + counts[names[i]] + ")";
+        areaEl.appendChild(o);
+      }
+      areaEl.setAttribute("data-sig", sig);
+    }
+    areaEl.value = areaSel;
+  }
+
+  function setAreaFilter(val) {
+    areaSel = val;
+    try { localStorage.setItem("bsh_area", val); } catch (e) {}
+    updateAreaOptions();
+    applyFilter();
+    renderDash();
+    updateMap();
+  }
+
+  try { areaSel = localStorage.getItem("bsh_area") || ""; } catch (e) { areaSel = ""; }
+  areaEl.addEventListener("change", function () { setAreaFilter(areaEl.value); });
 
   function updateNickBtn() {
     nickBtn.textContent = "👤 Spitzname: " + (myNick || "Anonym") + " · ändern";
@@ -1780,6 +1893,7 @@
       }
       toast(committed ? "Platz aktiviert! Jetzt für alle sichtbar. ✅" : "Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
       selected = null;
+      if (areaSel) setAreaFilter("");
       searchEl.value = sel.name;
       renderCreate();
       applyFilter();
@@ -1811,6 +1925,7 @@
     for (var k in data) {
       if (!data.hasOwnProperty(k)) continue;
       var v = data[k];
+      if (!areaOk(v)) continue;
       if (typeof v.lat !== "number" || typeof v.lon !== "number") { legacy++; continue; }
       known.push([v.lat, v.lon]);
       (function (key, pv) {
@@ -1909,9 +2024,12 @@
       deepDone = true;
       if (data[deepKey]) {
         searchEl.value = data[deepKey].name;
+        areaSel = "";
+        try { localStorage.setItem("bsh_area", ""); } catch (e) {}
       }
     }
 
+    updateAreaOptions();
     renderCreate();
     applyFilter();
     renderDash();
