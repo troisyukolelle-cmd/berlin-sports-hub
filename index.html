@@ -1551,12 +1551,20 @@
 
   showDashEmpty();
 
+  function isVerifiedPlace(key, v) {
+    if (!v || typeof v.name !== "string") return false;
+    if (typeof v.osm !== "string" || !/^[nwr][0-9]{1,15}$/.test(v.osm)) return false;
+    if (key !== "osm-" + v.osm) return false;
+    if (typeof v.lat !== "number" || typeof v.lon !== "number") return false;
+    return v.lat >= BERLIN.minLat && v.lat <= BERLIN.maxLat && v.lon >= BERLIN.minLon && v.lon <= BERLIN.maxLon;
+  }
+
   var firstLoad = true;
   placesRef.on("value", function (snap) {
     var val = snap.val() || {};
     var clean = {};
     for (var k in val) {
-      if (val.hasOwnProperty(k) && val[k] && typeof val[k].name === "string") clean[k] = val[k];
+      if (val.hasOwnProperty(k) && isVerifiedPlace(k, val[k])) clean[k] = val[k];
     }
     data = clean;
     sync();
