@@ -1,0 +1,241 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "places": {
+      ".read": true,
+      "$place": {
+        ".write": "!data.exists() && newData.exists() && newData.hasChildren(['osm', 'lat', 'lon']) && $place == 'osm-' + newData.child('osm').val()",
+        ".validate": "newData.hasChildren(['name', 'createdAt'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "osm": {
+          ".validate": "newData.isString() && newData.val().matches(/^[nwr][0-9]{1,15}$/)"
+        },
+        "lat": {
+          ".validate": "newData.isNumber() && newData.val() >= 52.3 && newData.val() <= 52.7"
+        },
+        "lon": {
+          ".validate": "newData.isNumber() && newData.val() >= 13.0 && newData.val() <= 13.8"
+        },
+        "area": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "kind": {
+          ".validate": "newData.isString() && newData.val().length <= 30"
+        },
+        "sports": {
+          "$i": {
+            ".validate": "$i.matches(/^[0-2]$/) && (newData.val() == 'basketball' || newData.val() == 'fussball' || newData.val() == 'volleyball')"
+          }
+        },
+        "sessions": {
+          "$sport": {
+            ".write": "newData.exists()",
+            ".validate": "($sport == 'basketball' || $sport == 'fussball' || $sport == 'volleyball') && newData.hasChildren(['players', 'date', 'time', 'sid'])",
+            "players": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99 && (data.exists() ? newData.val() <= data.val() + 1 : newData.val() <= 1)"
+            },
+            "date": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+            },
+            "time": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}:[0-9]{2}$/)"
+            },
+            "sid": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": "$other == 'sport' || $other == 'time' || $other == 'players' || $other == 'day'"
+        }
+      }
+    },
+    "chats": {
+      "$place": {
+        ".read": true,
+        "$msg": {
+          ".write": "!data.exists() && newData.exists() && root.child('places').child($place).exists()",
+          ".validate": "newData.hasChildren(['text', 'ts'])",
+          "text": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 300 && !newData.val().toLowerCase().matches(/(fuck|fick|wichs|wixx|arschloch|arschgeige|arschgesicht|asshole|dumbass|jackass|hurensohn|schlampe|fotze|nutte|muschi|schwuchtel|schwanzlutscher|kanake|zigeuner|judensau|nigger|nigga|neger|pussy|blowjob|handjob|cunt|bitch|slut|whore|faggot|retard|porn|penis|vagina|titten|hitler|vergewaltig|missgeburt|cocksuck|motherf|bastard|hundesohn|drecksau|vollidiot|idiot|trottel|depp|penner|onlyfans|telegram|snapchat|bitcoin|krypto|crypto|casino|escort|viagra|nudes|https?:|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+|eat ?my ?ass|eat ?ass|kill ?your ?self|suck ?my ?(dick|cock)|suck ?dick|halt ?d(ie|eine) ?fresse|halt(s|e)? ?(das|dein|deine)? ?maul|geh ?sterben)/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)$/)"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 300000 && newData.val() >= now - 86400000"
+          },
+          "nick": {
+            ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20 && newData.val().matches(/^[A-Za-zÄÖÜäöüß0-9 ._-]+$/) && !newData.val().toLowerCase().matches(/(fuck|fick|wichs|wixx|arschloch|arschgeige|arschgesicht|asshole|dumbass|jackass|hurensohn|schlampe|fotze|nutte|muschi|schwuchtel|schwanzlutscher|kanake|zigeuner|judensau|nigger|nigga|neger|pussy|blowjob|handjob|cunt|bitch|slut|whore|faggot|retard|porn|penis|vagina|titten|hitler|vergewaltig|missgeburt|cocksuck|motherf|bastard|hundesohn|drecksau|vollidiot|idiot|trottel|depp|penner|onlyfans|telegram|snapchat|bitcoin|krypto|crypto|casino|escort|viagra|nudes|https?:|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+|eat ?my ?ass|eat ?ass|kill ?your ?self|suck ?my ?(dick|cock)|suck ?dick|halt ?d(ie|eine) ?fresse|halt(s|e)? ?(das|dein|deine)? ?maul|geh ?sterben)/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)$/) && !newData.val().toLowerCase().matches(/(admin|moderator|support|berlin ?sports ?hub|berlinsportshub)/)"
+          },
+          "uid": {
+            ".validate": "newData.isString() && newData.val() == auth.uid"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "archive": {
+      "$place": {
+        ".read": true,
+        ".indexOn": [
+          "endedAt"
+        ],
+        "$id": {
+          ".write": "!data.exists() && newData.exists() && root.child('places').child($place).exists()",
+          ".validate": "newData.hasChildren(['sport', 'date', 'time', 'players', 'endedAt'])",
+          "sport": {
+            ".validate": "newData.isString() && (newData.val() == 'basketball' || newData.val() == 'fussball' || newData.val() == 'volleyball')"
+          },
+          "date": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "time": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}:[0-9]{2}$/)"
+          },
+          "players": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 99"
+          },
+          "endedAt": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 300000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "reports": {
+      "$place": {
+        ".read": true,
+        "$msg": {
+          "$dev": {
+            ".write": "!data.exists() && newData.exists() && root.child('chats').child($place).child($msg).exists()",
+            ".validate": "newData.isBoolean() && newData.val() == true && $dev.matches(/^[a-z0-9]{16,40}$/)"
+          }
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['nick', 'code'])",
+        "nick": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20 && newData.val().matches(/^[A-Za-zÄÖÜäöüß0-9 ._-]+$/) && !newData.val().toLowerCase().matches(/(fuck|fick|wichs|wixx|arschloch|arschgeige|arschgesicht|asshole|dumbass|jackass|hurensohn|schlampe|fotze|nutte|muschi|schwuchtel|schwanzlutscher|kanake|zigeuner|judensau|nigger|nigga|neger|pussy|blowjob|handjob|cunt|bitch|slut|whore|faggot|retard|porn|penis|vagina|titten|hitler|vergewaltig|missgeburt|cocksuck|motherf|bastard|hundesohn|drecksau|vollidiot|idiot|trottel|depp|penner|onlyfans|telegram|snapchat|bitcoin|krypto|crypto|casino|escort|viagra|nudes|https?:|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+|eat ?my ?ass|eat ?ass|kill ?your ?self|suck ?my ?(dick|cock)|suck ?dick|halt ?d(ie|eine) ?fresse|halt(s|e)? ?(das|dein|deine)? ?maul|geh ?sterben)/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)$/) && !newData.val().toLowerCase().matches(/(admin|moderator|support|berlin ?sports ?hub|berlinsportshub)/)"
+        },
+        "code": {
+          ".validate": "newData.isString() && newData.val().matches(/^[A-HJ-NP-Z2-9]{6}$/)"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() == auth.uid && root.child('users').child(auth.uid).child('code').val() == $code) || (data.exists() && !newData.exists() && data.val() == auth.uid))",
+        ".validate": "$code.matches(/^[A-HJ-NP-Z2-9]{6}$/) && newData.isString() && newData.val().length >= 20 && newData.val().length <= 40"
+      }
+    },
+    "requests": {
+      "$to": {
+        ".read": "auth != null && auth.uid == $to",
+        "$from": {
+          ".write": "auth != null && ((auth.uid == $from && $from != $to && !data.exists() && newData.exists() && !root.child('friends').child($from).child($to).exists()) || (!newData.exists() && (auth.uid == $from || auth.uid == $to)))",
+          ".validate": "newData.hasChildren(['nick', 'ts']) && $from.matches(/^[A-Za-z0-9]{20,40}$/) && $to.matches(/^[A-Za-z0-9]{20,40}$/) && newData.child('nick').val() == root.child('users').child($from).child('nick').val()",
+          "nick": {
+            ".validate": "newData.isString()"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 300000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "friends": {
+      "$a": {
+        ".read": "auth != null && auth.uid == $a",
+        "$b": {
+          ".write": "auth != null && (auth.uid == $a || auth.uid == $b) && (!newData.exists() || (auth.uid == $a && root.child('requests').child($a).child($b).exists()) || (auth.uid == $b && root.child('friends').child($b).child($a).exists()))",
+          ".validate": "newData.hasChildren(['ts']) && $a != $b && $a.matches(/^[A-Za-z0-9]{20,40}$/) && $b.matches(/^[A-Za-z0-9]{20,40}$/)",
+          "ts": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "dm": {
+      "$chat": {
+        ".read": "auth != null && ($chat.beginsWith(auth.uid + '_') || $chat.endsWith('_' + auth.uid)) && root.child('friends').child(auth.uid).child($chat.replace(auth.uid, '').replace('_', '')).exists()",
+        "$msg": {
+          ".write": "auth != null && ($chat.beginsWith(auth.uid + '_') || $chat.endsWith('_' + auth.uid)) && ((!data.exists() && newData.exists() && root.child('friends').child(auth.uid).child($chat.replace(auth.uid, '').replace('_', '')).exists()) || (data.exists() && !newData.exists() && data.child('from').val() == auth.uid))",
+          ".validate": "newData.hasChildren(['from', 'text', 'ts']) && $chat.matches(/^[A-Za-z0-9]{20,40}_[A-Za-z0-9]{20,40}$/)",
+          "from": {
+            ".validate": "newData.val() == auth.uid"
+          },
+          "text": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 300 && !newData.val().toLowerCase().matches(/(fuck|fick|wichs|wixx|arschloch|arschgeige|arschgesicht|asshole|dumbass|jackass|hurensohn|schlampe|fotze|nutte|muschi|schwuchtel|schwanzlutscher|kanake|zigeuner|judensau|nigger|nigga|neger|pussy|blowjob|handjob|cunt|bitch|slut|whore|faggot|retard|porn|penis|vagina|titten|hitler|vergewaltig|missgeburt|cocksuck|motherf|bastard|hundesohn|drecksau|vollidiot|idiot|trottel|depp|penner|onlyfans|telegram|snapchat|bitcoin|krypto|crypto|casino|escort|viagra|nudes|https?:|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+|eat ?my ?ass|eat ?ass|kill ?your ?self|suck ?my ?(dick|cock)|suck ?dick|halt ?d(ie|eine) ?fresse|halt(s|e)? ?(das|dein|deine)? ?maul|geh ?sterben)/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)$/)"
+          },
+          "ts": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 300000 && newData.val() >= now - 86400000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "played": {
+      "$key": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "$key.matches(/^osm-[nwr][0-9]{1,15}_(basketball|fussball|volleyball)_[0-9]{1,16}$/) && $uid.matches(/^[A-Za-z0-9]{20,40}$/) && newData.isString() && newData.val().length >= 2 && newData.val().length <= 20 && newData.val().matches(/^[A-Za-zÄÖÜäöüß0-9 ._-]+$/) && !newData.val().toLowerCase().matches(/(fuck|fick|wichs|wixx|arschloch|arschgeige|arschgesicht|asshole|dumbass|jackass|hurensohn|schlampe|fotze|nutte|muschi|schwuchtel|schwanzlutscher|kanake|zigeuner|judensau|nigger|nigga|neger|pussy|blowjob|handjob|cunt|bitch|slut|whore|faggot|retard|porn|penis|vagina|titten|hitler|vergewaltig|missgeburt|cocksuck|motherf|bastard|hundesohn|drecksau|vollidiot|idiot|trottel|depp|penner|onlyfans|telegram|snapchat|bitcoin|krypto|crypto|casino|escort|viagra|nudes|https?:|www\\.|[a-z0-9._%+-]+@[a-z0-9.-]+|eat ?my ?ass|eat ?ass|kill ?your ?self|suck ?my ?(dick|cock)|suck ?dick|halt ?d(ie|eine) ?fresse|halt(s|e)? ?(das|dein|deine)? ?maul|geh ?sterben)/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/^(ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[^a-z0-9](ass|asses|arse|arsch|arsche|anal|sex|cum|cock|cocks|dick|dicks|tits|tit|fag|fags|hoe|hoes|rape|raped|nazi|nazis|hure|huren|spast|spasti|kys|mongo|schwanz|pimmel|stfu|gtfo)$/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)[^a-z0-9]/) && !newData.val().toLowerCase().matches(/[a-z0-9-]+\\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)$/) && !newData.val().toLowerCase().matches(/(admin|moderator|support|berlin ?sports ?hub|berlinsportshub)/)"
+        }
+      }
+    },
+    "history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        "$id": {
+          ".validate": "newData.hasChildren(['key', 'place', 'sport', 'date', 'time'])",
+          "key": {
+            ".validate": "newData.isString() && newData.val().matches(/^osm-[nwr][0-9]{1,15}_(basketball|fussball|volleyball)_[0-9]{1,16}$/)"
+          },
+          "place": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+          },
+          "sport": {
+            ".validate": "newData.isString() && (newData.val() == 'basketball' || newData.val() == 'fussball' || newData.val() == 'volleyball')"
+          },
+          "date": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "time": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{2}:[0-9]{2}$/)"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}
