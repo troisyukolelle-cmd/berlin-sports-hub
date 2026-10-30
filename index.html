@@ -217,6 +217,11 @@
     background: #2f3338; border: 2px solid #3a3f46; border-radius: 16px; cursor: pointer;
   }
   .tool-btn.on { color: #ffffff; background: #10b981; border-color: #10b981; }
+  .nick-btn {
+    display: block; width: 100%; margin-top: 10px; padding: 10px 14px; text-align: left;
+    font-family: inherit; font-size: 14px; font-weight: 600; color: #c9ced4;
+    background: transparent; border: 2px dashed #4a5058; border-radius: 14px; cursor: pointer;
+  }
   .dist { margin: -6px 0 10px 0; font-size: 13px; font-weight: 600; color: #5b636c; }
   .wx {
     margin-bottom: 10px; padding: 8px 12px; background: #eaf3ff; color: #1e3a5f;
@@ -245,6 +250,7 @@
     <button type="button" class="tool-btn" id="nearBtn">📍 In meiner Nähe</button>
     <button type="button" class="tool-btn" id="mapToggle" style="display:none">🗺️ Karte anzeigen</button>
   </div>
+  <button type="button" class="nick-btn" id="nickBtn">👤 Spitzname: Anonym · ändern</button>
   <div id="mapWrap" style="display:none">
     <div id="map"></div>
     <div class="map-legend">🟢 aktivierte Plätze · 🔵 Vorschläge zur Suche · 🟠 deine Auswahl. Tippe einen Punkt an.</div>
@@ -261,7 +267,7 @@
   </div>
   <div id="hiddenList" style="display:none"></div>
   <div id="emptyArea"></div>
-  <div class="hint">Alle Plätze, Spielerzahlen und Chats sind live für alle Nutzer sichtbar. Chats sind anonym. Spiele werden 2 Stunden nach der Uhrzeit (Berliner Zeit) automatisch zurückgesetzt.</div>
+  <div class="hint">Alle Plätze, Spielerzahlen und Chats sind live für alle Nutzer sichtbar. Chats sind anonym, außer du wählst einen Spitznamen. Spiele werden 2 Stunden nach der Uhrzeit (Berliner Zeit) automatisch zurückgesetzt.</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -312,6 +318,8 @@
   var mapLayer = null;
   var mapOpen = false;
   var nearBtn = document.getElementById("nearBtn");
+  var nickBtn = document.getElementById("nickBtn");
+  var myNick = "";
   var userPos = null;
   var nearOn = false;
   var wx = { data: null, fetchedAt: 0, loading: false };
@@ -603,6 +611,28 @@
     if (isShouting(text)) return "Bitte nicht nur in Großbuchstaben schreiben.";
     if (isSpammy(text)) return "Diese Nachricht sieht nach Spam aus und wurde nicht gesendet.";
     return "";
+  }
+
+  var NICK_RESERVED = ["admin", "moderator", "support", "berlin sports hub", "berlinsportshub"];
+
+  function nickProblem(raw) {
+    var n = String(raw).trim().replace(/\s+/g, " ");
+    if (n.length < 2) return "Der Spitzname braucht mindestens 2 Zeichen.";
+    if (n.length > 20) return "Der Spitzname darf höchstens 20 Zeichen lang sein.";
+    if (!/^[A-Za-zÄÖÜäöüß0-9 ._-]+$/.test(n)) return "Im Spitznamen sind nur Buchstaben, Zahlen, Leerzeichen sowie . _ - erlaubt.";
+    if (chatProblem(n)) return "Dieser Spitzname ist nicht erlaubt.";
+    var nn = n.toLowerCase().replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, " ").trim();
+    for (var i = 0; i < NICK_RESERVED.length; i++) {
+      if (nn.indexOf(NICK_RESERVED[i]) !== -1 || nn.replace(/ /g, "").indexOf(NICK_RESERVED[i].replace(/ /g, "")) !== -1) {
+        return "Dieser Spitzname ist nicht erlaubt.";
+      }
+    }
+    return "";
+  }
+
+  function nickOf(m) {
+    if (!m || typeof m.nick !== "string") return "";
+    return nickProblem(m.nick) === "" ? m.nick.trim().replace(/\s+/g, " ") : "";
   }
 
   var deviceId = "";
@@ -1041,7 +1071,9 @@
       lastSendAt = Date.now();
       c.recent[dupKey] = Date.now();
       c.input.value = "";
-      db.ref("chats/" + key).push({ text: text, ts: nowMs() }).catch(function () {
+      var payload = { text: text, ts: nowMs() };
+      if (myNick) payload.nick = myNick;
+      db.ref("chats/" + key).push(payload).catch(function () {
         c.input.value = text;
         toast("Nachricht konnte nicht gesendet werden.");
       });
@@ -1062,7 +1094,7 @@
       div.className = "msg";
       div.appendChild(document.createTextNode(m.text));
       var small = document.createElement("small");
-      small.textContent = "Anonym · " + timeOf(m.ts);
+      small.textContent = (nickOf(m) || "Anonym") + " · " + timeOf(m.ts);
       div.appendChild(small);
       var rep = document.createElement("button");
       rep.type = "button";
@@ -1408,6 +1440,38 @@
       }).catch(function () {});
     }
   } catch (e) {}
+
+  function updateNickBtn() {
+    nickBtn.textContent = "👤 Spitzname: " + (myNick || "Anonym") + " · ändern";
+  }
+
+  try {
+    var storedNick = localStorage.getItem("bsh_nick") || "";
+    if (storedNick && nickProblem(storedNick) === "") myNick = storedNick.trim().replace(/\s+/g, " ");
+  } catch (e) { myNick = ""; }
+  updateNickBtn();
+
+  nickBtn.addEventListener("click", function () {
+    var input = window.prompt("Wie möchtest du im Chat heißen?\n(2 bis 20 Zeichen, leer lassen = anonym)", myNick);
+    if (input === null) return;
+    input = input.trim().replace(/\s+/g, " ");
+    if (input === "") {
+      myNick = "";
+      try { localStorage.removeItem("bsh_nick"); } catch (e) {}
+      updateNickBtn();
+      toast("Du schreibst jetzt wieder anonym.");
+      return;
+    }
+    var problem = nickProblem(input);
+    if (problem) {
+      toast(problem);
+      return;
+    }
+    myNick = input;
+    try { localStorage.setItem("bsh_nick", myNick); } catch (e) {}
+    updateNickBtn();
+    toast("Spitzname gespeichert: " + myNick);
+  });
 
   function wxInfo(code) {
     if (code === 0) return ["☀️", "sonnig"];
