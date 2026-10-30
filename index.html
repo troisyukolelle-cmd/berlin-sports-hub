@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#25282d">
+<title>Berlin Sports Hub</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #25282d;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 0 0 40px 0;
+    -webkit-overflow-scrolling: touch;
+  }
+  header { padding: 26px 18px 8px 18px; text-align: center; }
+  header h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 0.3px; }
+  header h1 span { color: #10b981; }
+  header p { margin: 6px 0 0 0; color: #9aa0a8; font-size: 14px; }
+  .conn { display: inline-block; margin-top: 8px; font-size: 12px; color: #9aa0a8; }
+  .conn i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; margin-right: 6px; }
+  .conn.on i { background: #10b981; }
+  .wrap { padding: 12px 14px; max-width: 560px; margin: 0 auto; }
+  .search {
+    width: 100%; padding: 16px 18px; font-size: 16px;
+    border: 2px solid #3a3f46; border-radius: 16px;
+    background: #2f3338; color: #ffffff; outline: none;
+  }
+  .search::placeholder { color: #8b919a; }
+  .search:focus { border-color: #10b981; }
+  .create-btn {
+    display: block; width: 100%; margin-top: 12px; padding: 18px 16px;
+    font-size: 17px; font-weight: 700; line-height: 1.3; color: #ffffff;
+    background: #10b981; border: none; border-radius: 16px; cursor: pointer; word-break: break-word;
+  }
+  .create-btn:active { transform: scale(0.98); }
+  .dash {
+    margin-top: 18px; padding: 16px; background: #2f3338;
+    border: 2px solid #3a3f46; border-radius: 20px;
+  }
+  .dash h2 { margin: 0 0 12px 0; font-size: 18px; font-weight: 800; color: #ffffff; }
+  .dash-empty { color: #9aa0a8; font-size: 14px; line-height: 1.5; }
+  .dash-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; margin-top: 8px; padding: 12px 14px; text-align: left;
+    background: #ffffff; color: #1f2328; border: none; border-radius: 14px; cursor: pointer;
+    font-family: inherit;
+  }
+  .dash-item:first-of-type { margin-top: 0; }
+  .dash-item:active { transform: scale(0.98); }
+  .dash-main { min-width: 0; flex: 1; }
+  .dash-name { display: block; font-size: 16px; font-weight: 800; word-break: break-word; }
+  .dash-sub { display: block; margin-top: 3px; font-size: 13px; color: #5b636c; }
+  .dash-count {
+    flex-shrink: 0; min-width: 34px; padding: 6px 10px; text-align: center;
+    background: #10b981; color: #ffffff; font-size: 15px; font-weight: 800; border-radius: 12px;
+  }
+  .empty { margin-top: 30px; text-align: center; color: #9aa0a8; font-size: 15px; line-height: 1.5; padding: 0 10px; }
+  .empty .big { font-size: 46px; display: block; margin-bottom: 8px; }
+  .setup {
+    margin: 24px 0; padding: 20px; background: #ffffff; color: #1f2328;
+    border-radius: 20px; font-size: 15px; line-height: 1.5;
+  }
+  .setup h2 { margin: 0 0 10px 0; font-size: 20px; }
+  .card {
+    background: #ffffff; color: #1f2328; border-radius: 20px; padding: 18px;
+    margin-top: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    transition: box-shadow 0.3s ease;
+  }
+  .card.flash { box-shadow: 0 0 0 4px #10b981, 0 6px 18px rgba(0,0,0,0.25); }
+  .card h2 { margin: 0 0 12px 0; font-size: 21px; word-break: break-word; }
+  .sports { display: flex; gap: 8px; margin-bottom: 14px; }
+  .sport {
+    flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 700;
+    border: 2px solid #d9dde2; background: #f3f5f7; color: #3b424a;
+    border-radius: 12px; cursor: pointer;
+  }
+  .sport .ico { display: block; font-size: 22px; margin-bottom: 2px; }
+  .sport .cnt { display: block; min-height: 15px; margin-top: 2px; font-size: 11px; font-weight: 700; color: #067a56; }
+  .sport.active { border-color: #10b981; background: #e7f9f2; color: #067a56; }
+  .status { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2b3138; }
+  .status b { color: #10b981; font-size: 20px; }
+  .timerow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .timerow label { width: 92px; flex-shrink: 0; font-size: 15px; font-weight: 600; color: #3b424a; }
+  .timerow select {
+    flex: 1; min-width: 0; padding: 12px; font-size: 16px; border: 2px solid #d9dde2;
+    border-radius: 12px; background: #f3f5f7; color: #1f2328;
+  }
+  .join {
+    width: 100%; margin-top: 4px; padding: 18px; font-size: 19px; font-weight: 800; color: #ffffff;
+    background: #10b981; border: none; border-radius: 16px; cursor: pointer;
+  }
+  .join.leave { background: #ef4444; }
+  .join:active { transform: scale(0.98); }
+  .share {
+    width: 100%; margin-top: 10px; padding: 14px; font-size: 16px; font-weight: 700;
+    color: #067a56; background: #e7f9f2; border: 2px solid #10b981; border-radius: 14px; cursor: pointer;
+  }
+  .chat { margin-top: 16px; border-top: 2px solid #eceff2; padding-top: 14px; }
+  .chat h3 { margin: 0 0 8px 0; font-size: 15px; color: #3b424a; }
+  .msgs {
+    max-height: 190px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    background: #f3f5f7; border-radius: 12px; padding: 8px; margin-bottom: 10px;
+  }
+  .msgs:empty::before {
+    content: "Noch keine Nachrichten. Schreib die erste!";
+    display: block; color: #8b919a; font-size: 14px; text-align: center; padding: 8px;
+  }
+  .msg {
+    background: #ffffff; border: 1px solid #e3e7eb; border-radius: 12px;
+    padding: 8px 10px; margin-bottom: 6px; font-size: 15px; word-break: break-word; color: #1f2328;
+  }
+  .msg { position: relative; padding-right: 34px; }
+  .msg small { display: block; color: #8b919a; font-size: 11px; margin-top: 3px; }
+  .rep { position: absolute; top: 4px; right: 4px; padding: 4px 6px; font-size: 14px; background: transparent; border: none; opacity: 0.45; cursor: pointer; }
+  .rep:active { opacity: 1; }
+  .chatrow { display: flex; gap: 8px; }
+  .chatrow input {
+    flex: 1; min-width: 0; padding: 13px; font-size: 16px; border: 2px solid #d9dde2;
+    border-radius: 12px; background: #ffffff; color: #1f2328; outline: none;
+  }
+  .chatrow input:focus { border-color: #10b981; }
+  .chatrow button {
+    padding: 0 18px; font-size: 15px; font-weight: 700; color: #ffffff;
+    background: #10b981; border: none; border-radius: 12px; cursor: pointer;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: #ffffff; color: #1f2328; padding: 12px 18px; border-radius: 14px;
+    font-size: 14px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    max-width: 90%; text-align: center; display: none; z-index: 10;
+  }
+  .arch-toggle {
+    display: block; width: 100%; margin-top: 22px; padding: 14px 16px; text-align: left;
+    font-family: inherit; font-size: 15px; font-weight: 700; color: #c9ced4;
+    background: #2f3338; border: 2px dashed #4a5058; border-radius: 16px; cursor: pointer;
+  }
+  .arch-toggle:active { transform: scale(0.99); }
+  .hist { margin: 14px 0 0 0; padding: 10px 12px; background: #f3f5f7; border-radius: 12px; font-size: 13px; color: #5b636c; }
+  .hist b { display: block; margin-bottom: 4px; font-size: 13px; color: #3b424a; }
+  .hist div { margin-top: 2px; }
+  .sug-box { margin-top: 10px; background: #2f3338; border: 2px solid #3a3f46; border-radius: 16px; overflow: hidden; }
+  .sug-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; padding: 12px 14px; text-align: left; font-family: inherit; color: #ffffff;
+    background: transparent; border: none; border-top: 1px solid #3a3f46; cursor: pointer;
+  }
+  .sug-item:first-child { border-top: none; }
+  .sug-item:active { background: #3a3f46; }
+  .sug-main { min-width: 0; flex: 1; }
+  .sug-name { display: block; font-size: 16px; font-weight: 800; word-break: break-word; }
+  .sug-sub { display: block; margin-top: 2px; font-size: 13px; color: #9aa0a8; }
+  .sug-badge { flex-shrink: 0; font-size: 12px; font-weight: 700; color: #10b981; }
+  .sug-info { padding: 12px 14px; font-size: 14px; line-height: 1.4; color: #9aa0a8; }
+  .create-hint { margin-top: 10px; font-size: 13px; line-height: 1.4; color: #9aa0a8; }
+  .create-info {
+    margin-top: 12px; padding: 14px 16px; background: #2f3338; border: 2px solid #3a3f46;
+    border-radius: 16px; font-size: 15px; line-height: 1.4; color: #ffffff;
+  }
+  .create-info button {
+    display: block; width: 100%; margin-top: 10px; padding: 12px; font-family: inherit; font-size: 15px;
+    font-weight: 700; color: #ffffff; background: #10b981; border: none; border-radius: 12px; cursor: pointer;
+  }
+  .map-toggle {
+    display: block; width: 100%; margin-top: 14px; padding: 12px 16px; text-align: left;
+    font-family: inherit; font-size: 15px; font-weight: 700; color: #c9ced4;
+    background: #2f3338; border: 2px solid #3a3f46; border-radius: 16px; cursor: pointer;
+  }
+  #map { height: 280px; margin-top: 10px; border: 2px solid #3a3f46; border-radius: 16px; overflow: hidden; }
+  .map-legend { margin-top: 6px; font-size: 12px; line-height: 1.4; color: #9aa0a8; }
+  .map-hint { margin-top: 6px; font-size: 13px; line-height: 1.4; color: #f59e0b; }
+  .hint { text-align: center; color: #6f757d; font-size: 12px; margin-top: 26px; padding: 0 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Berlin <span>Sports</span> Hub</h1>
+  <p>Finde Mitspieler an Parks &amp; Bolzplätzen in ganz Berlin</p>
+  <div class="conn" id="conn"><i></i><span id="connText">Verbinde...</span></div>
+</header>
+
+<div class="wrap">
+  <input id="search" class="search" type="text" placeholder="Such deinen lokalen Bolzplatz oder Park..." autocomplete="off" autocapitalize="words">
+  <div id="suggest"></div>
+  <div id="createArea"></div>
+  <button type="button" class="map-toggle" id="mapToggle" style="display:none">🗺️ Karte anzeigen</button>
+  <div id="mapWrap" style="display:none">
+    <div id="map"></div>
+    <div class="map-legend">🟢 aktivierte Plätze · 🔵 Vorschläge zur Suche · 🟠 deine Auswahl. Tippe einen Punkt an.</div>
+    <div class="map-hint" id="mapHint"></div>
+  </div>
+  <div class="dash">
+    <h2>🔥 Aktive Suchen in Berlin</h2>
+    <div id="dashList"></div>
+  </div>
+  <div id="list"></div>
+  <div id="archiveBox" style="display:none">
+    <button type="button" class="arch-toggle" id="archiveToggle"></button>
+    <div id="archiveList" style="display:none"></div>
+  </div>
+  <div id="hiddenList" style="display:none"></div>
+  <div id="emptyArea"></div>
+  <div class="hint">Alle Plätze, Spielerzahlen und Chats sind live für alle Nutzer sichtbar. Chats sind anonym. Spiele werden 2 Stunden nach der Uhrzeit (Berliner Zeit) automatisch zurückgesetzt.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var DATABASE_URL = "https://berlin-sports-4a33b-default-rtdb.europe-west1.firebasedatabase.app";
+  var EXPIRE_MS = 2 * 60 * 60 * 1000;
+  var NEW_PLACE_MS = 24 * 60 * 60 * 1000;
+  var DAYS_AHEAD = 7;
+  var WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+  var SPORTS = [
+    { id: "basketball", icon: "🏀", name: "Basketball", verb: "Basketball spielen" },
+    { id: "fussball", icon: "⚽", name: "Fußball", verb: "Kicken" },
+    { id: "volleyball", icon: "🏐", name: "Volleyball", verb: "Volleyball spielen" }
+  ];
+
+  var TIMES = [];
+  for (var h = 8; h <= 22; h++) {
+    TIMES.push((h < 10 ? "0" : "") + h + ":00");
+    if (h < 22) TIMES.push((h < 10 ? "0" : "") + h + ":30");
+  }
+
+  var searchEl = document.getElementById("search");
+  var createArea = document.getElementById("createArea");
+  var dashList = document.getElementById("dashList");
+  var listEl = document.getElementById("list");
+  var emptyArea = document.getElementById("emptyArea");
+  var archiveBox = document.getElementById("archiveBox");
+  var archiveToggle = document.getElementById("archiveToggle");
+  var archiveListEl = document.getElementById("archiveList");
+  var hiddenListEl = document.getElementById("hiddenList");
+  var archiveOpen = false;
+  var suggestEl = document.getElementById("suggest");
+  var mapToggle = document.getElementById("mapToggle");
+  var mapWrap = document.getElementById("mapWrap");
+  var selected = null;
+  var suggestions = [];
+  var suggestState = "idle";
+  var sugTimer = null;
+  var sugSeq = 0;
+  var sugCache = {};
+  var mapObj = null;
+  var mapLayer = null;
+  var mapOpen = false;
+  var connEl = document.getElementById("conn");
+  var connText = document.getElementById("connText");
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.display = "block";
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.style.display = "none"; }, 3800);
+  }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+  function norm(s) {
+    return String(s).trim().replace(/\s+/g, " ").toLowerCase();
+  }
+
+  function makeKey(name) {
+    var k = norm(name).replace(/[.#$\[\]\/]/g, "-");
+    if (k.length > 100) k = k.substring(0, 100);
+    return k;
+  }
+
+  var serverOffset = 0;
+
+  function nowMs() { return Date.now() + serverOffset; }
+
+  function berlinParts(ms) {
+    try {
+      var f = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+      });
+      var p = f.formatToParts(new Date(ms));
+      var o = {};
+      for (var i = 0; i < p.length; i++) o[p[i].type] = p[i].value;
+      var res = { y: parseInt(o.year, 10), mo: parseInt(o.month, 10), d: parseInt(o.day, 10), h: parseInt(o.hour, 10) % 24, mi: parseInt(o.minute, 10) };
+      if (isNaN(res.y) || isNaN(res.mo) || isNaN(res.d) || isNaN(res.h) || isNaN(res.mi)) throw new Error("x");
+      return res;
+    } catch (e) {
+      var d = new Date(ms);
+      return { y: d.getFullYear(), mo: d.getMonth() + 1, d: d.getDate(), h: d.getHours(), mi: d.getMinutes() };
+    }
+  }
+
+  function todayStr() {
+    var p = berlinParts(nowMs());
+    return p.y + "-" + pad(p.mo) + "-" + pad(p.d);
+  }
+
+  function wallNow() {
+    var p = berlinParts(nowMs());
+    return Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi);
+  }
+
+  function wallStart(date, time) {
+    var dp = String(date).split("-");
+    var tp = String(time).split(":");
+    var y = parseInt(dp[0], 10);
+    var mo = parseInt(dp[1], 10);
+    var d = parseInt(dp[2], 10);
+    var hh = parseInt(tp[0], 10);
+    var mi = parseInt(tp[1], 10);
+    if (isNaN(y) || isNaN(mo) || isNaN(d) || isNaN(hh) || isNaN(mi)) return NaN;
+    return Date.UTC(y, mo - 1, d, hh, mi);
+  }
+
+  function sessionExpired(date, time) {
+    var s = wallStart(date, time);
+    if (isNaN(s)) return false;
+    return wallNow() > s + EXPIRE_MS;
+  }
+
+  function addDays(dateStr, n) {
+    var dp = dateStr.split("-");
+    var t = new Date(Date.UTC(parseInt(dp[0], 10), parseInt(dp[1], 10) - 1, parseInt(dp[2], 10) + n));
+    return t.getUTCFullYear() + "-" + pad(t.getUTCMonth() + 1) + "-" + pad(t.getUTCDate());
+  }
+
+  function dateLabel(dateStr) {
+    var today = todayStr();
+    if (dateStr === today) return "Heute";
+    if (dateStr === addDays(today, 1)) return "Morgen";
+    var dp = dateStr.split("-");
+    var y = parseInt(dp[0], 10);
+    var m = parseInt(dp[1], 10);
+    var d = parseInt(dp[2], 10);
+    var wd = WD[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    return wd + ", " + pad(d) + "." + pad(m) + ".";
+  }
+
+  function timeOf(ts) {
+    var p = berlinParts(ts || nowMs());
+    return pad(p.h) + ":" + pad(p.mi);
+  }
+
+  var BLOCK_STEMS = [
+    "fuck", "fick", "wichs", "wixx", "arschloch", "arschgeige", "arschgesicht", "asshole", "dumbass", "jackass",
+    "hurensohn", "schlampe", "fotze", "nutte", "muschi", "schwuchtel", "schwanzlutscher", "kanake", "zigeuner",
+    "judensau", "nigger", "nigga", "neger", "pussy", "blowjob", "handjob", "cunt", "bitch", "slut", "whore",
+    "faggot", "retard", "porn", "penis", "vagina", "titten", "hitler", "vergewaltig", "missgeburt", "cocksuck",
+    "motherf", "bastard", "hundesohn", "drecksau", "vollidiot", "idiot", "trottel", "depp", "penner",
+    "onlyfans", "telegram", "snapchat", "bitcoin", "krypto", "crypto", "casino", "escort", "viagra", "nudes"
+  ];
+  var BLOCK_WORDS = [
+    "ass", "asses", "arse", "arsch", "arsche", "anal", "sex", "cum", "cock", "cocks", "dick", "dicks",
+    "tits", "tit", "fag", "fags", "hoe", "hoes", "rape", "raped", "nazi", "nazis", "hure", "huren",
+    "spast", "spasti", "kys", "mongo", "schwanz", "pimmel", "stfu", "gtfo"
+  ];
+  var BLOCK_PHRASES = [
+    "eatass", "eatmyass", "killyourself", "gokillyourself", "suckmydick", "suckdick", "fuckyou", "fuckoff",
+    "haltdiefresse", "haltdeinefresse", "haltsmaul", "haltdasmaul", "haltdeinmaul", "gehsterben"
+  ];
+  var LINK_RE = /(https?:|www\.|[a-z0-9-]+\.(com|net|org|de|io|ru|xyz|ly|me|co|info|link)\b)/i;
+  var EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+/i;
+  var REPORT_LIMIT = 3;
+
+  function foldDiacritics(s) {
+    return s.replace(/[äàáâãå]/g, "a").replace(/[öòóôõ]/g, "o").replace(/[üùúû]/g, "u")
+      .replace(/[èéêë]/g, "e").replace(/[ìíîï]/g, "i").replace(/ñ/g, "n").replace(/ç/g, "c");
+  }
+
+  function squeezeTriples(w) { return w.replace(/(.)\1{2,}/g, "$1$1"); }
+
+  var BLOCK_WORD_SET = {};
+  for (var bw = 0; bw < BLOCK_WORDS.length; bw++) BLOCK_WORD_SET[BLOCK_WORDS[bw]] = true;
+
+  function leetFix(t) {
+    return t.replace(/0/g, "o").replace(/1/g, "i").replace(/3/g, "e").replace(/4/g, "a")
+      .replace(/5/g, "s").replace(/7/g, "t").replace(/@/g, "a").replace(/\$/g, "s")
+      .replace(/!/g, "i").replace(/€/g, "e").replace(/[^a-z]/g, "");
+  }
+
+  function isBlockedText(text) {
+    if (typeof text !== "string") return false;
+    if (LINK_RE.test(text)) return true;
+    var s = foldDiacritics(text.toLowerCase().replace(/ß/g, "ss"));
+    var raw = s.split(/[\s.,;:?\-_\/\\|()\[\]{}"'`~*+=<>#%&^]+/);
+    var cands = [];
+    var full = "";
+    var run = "";
+    var runLen = 0;
+    function flushRun() {
+      if (runLen >= 3) cands.push(run);
+      run = "";
+      runLen = 0;
+    }
+    for (var i = 0; i < raw.length; i++) {
+      var t = raw[i];
+      if (!t) continue;
+      var plain = t.replace(/[^a-z0-9]/g, "");
+      var hasLetter = /[a-z@$!€]/.test(t);
+      var leet = hasLetter ? leetFix(t) : "";
+      if (plain) cands.push(plain);
+      if (leet && leet !== plain) cands.push(leet);
+      full += leet || plain.replace(/[0-9]/g, "");
+      var single = (plain.length === 1 && /[a-z]/.test(plain)) ? plain : (leet.length === 1 ? leet : "");
+      if (single) {
+        run += single;
+        runLen++;
+      } else {
+        flushRun();
+      }
+    }
+    flushRun();
+    for (var p = 0; p < BLOCK_PHRASES.length; p++) {
+      if (full.indexOf(BLOCK_PHRASES[p]) !== -1) return true;
+    }
+    for (var c = 0; c < cands.length; c++) {
+      var w = squeezeTriples(cands[c]);
+      if (!w) continue;
+      if (BLOCK_WORD_SET[w]) return true;
+      var wq = cands[c].replace(/(.)\1{2,}/g, "$1");
+      for (var k = 0; k < BLOCK_STEMS.length; k++) {
+        if (w.indexOf(BLOCK_STEMS[k]) !== -1 || wq.indexOf(BLOCK_STEMS[k]) !== -1) return true;
+      }
+    }
+    return false;
+  }
+
+  function hasPhone(text) {
+    var m = text.match(/[+\d][\d\s\/.-]{7,}\d/g);
+    if (!m) return false;
+    for (var i = 0; i < m.length; i++) {
+      if (m[i].replace(/\D/g, "").length >= 9) return true;
+    }
+    return false;
+  }
+
+  function isShouting(text) {
+    var letters = text.replace(/[^A-Za-zÄÖÜäöüß]/g, "");
+    if (letters.length < 8) return false;
+    var up = letters.replace(/[^A-ZÄÖÜ]/g, "").length;
+    return up / letters.length > 0.7;
+  }
+
+  function countEmoji(text) {
+    var n = 0;
+    for (var i = 0; i < text.length; i++) {
+      var code = text.charCodeAt(i);
+      if ((code >= 0xD83C && code <= 0xD83E) || (code >= 0x2600 && code <= 0x27BF)) n++;
+    }
+    return n;
+  }
+
+  function isSpammy(text) {
+    var t = text.trim();
+    if (/(.)\1{5,}/.test(t)) return true;
+    var low = foldDiacritics(t.toLowerCase());
+    var words = low.split(/[^a-z0-9]+/);
+    var counts = {};
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (w.length < 2) continue;
+      counts[w] = (counts[w] || 0) + 1;
+      if (counts[w] >= 4) return true;
+      if (w.length >= 8) {
+        var vowels = (w.match(/[aeiouy]/g) || []).length;
+        if (vowels / w.length < 0.12) return true;
+        if (/(asdf|sdfg|dfgh|fghj|ghjk|hjkl|qwer|wert|erty|rtzu|tzui|zuio|yxcv|xcvb|cvbn|fdsa|gfds|hgfd|jhgf|kjhg|lkjh|poiu|mnbv)/.test(w)) return true;
+      }
+    }
+    var emojis = countEmoji(t);
+    if (emojis >= 7) return true;
+    if (!/[a-zäöüß0-9]/i.test(t) && emojis === 0) return true;
+    return false;
+  }
+
+  function chatProblem(text) {
+    if (typeof text !== "string") return "Ungültige Nachricht.";
+    if (LINK_RE.test(text)) return "Links sind im Chat nicht erlaubt.";
+    if (EMAIL_RE.test(text) || hasPhone(text)) return "Keine Telefonnummern oder E-Mail-Adressen im Chat.";
+    if (isBlockedText(text)) return "Diese Nachricht ist nicht erlaubt und wurde nicht gesendet.";
+    if (isShouting(text)) return "Bitte nicht nur in Großbuchstaben schreiben.";
+    if (isSpammy(text)) return "Diese Nachricht sieht nach Spam aus und wurde nicht gesendet.";
+    return "";
+  }
+
+  var deviceId = "";
+  try { deviceId = localStorage.getItem("bsh_device") || ""; } catch (e) { deviceId = ""; }
+  if (!/^[a-z0-9]{16,40}$/.test(deviceId)) {
+    deviceId = "";
+    for (var di = 0; di < 24; di++) deviceId += "abcdefghijklmnopqrstuvwxyz0123456789".charAt(Math.floor(Math.random() * 36));
+    try { localStorage.setItem("bsh_device", deviceId); } catch (e) {}
+  }
+
+  function sportById(id) {
+    for (var i = 0; i < SPORTS.length; i++) {
+      if (SPORTS[i].id === id) return SPORTS[i];
+    }
+    return null;
+  }
+
+  function showDashEmpty() {
+    dashList.innerHTML = "";
+    var d = document.createElement("div");
+    d.className = "dash-empty";
+    d.textContent = "Aktuell sucht niemand. Sei der Erste und aktiviere einen Platz!";
+    dashList.appendChild(d);
+  }
+
+  if (typeof firebase === "undefined") {
+    listEl.innerHTML = '<div class="setup"><h2>Keine Internetverbindung</h2>Die Datenbank-Bibliothek konnte nicht geladen werden. Bitte prüfe dein Internet und lade die Seite neu.</div>';
+    connText.textContent = "Offline";
+    showDashEmpty();
+    return;
+  }
+
+  var db;
+  try {
+    firebase.initializeApp({ databaseURL: DATABASE_URL });
+    db = firebase.database();
+  } catch (e) {
+    listEl.innerHTML = '<div class="setup"><h2>Fehler</h2>Die Datenbank-Adresse scheint ungültig zu sein. Bitte prüfe die DATABASE_URL im Code.</div>';
+    connText.textContent = "Fehler";
+    searchEl.disabled = true;
+    showDashEmpty();
+    return;
+  }
+
+  var placesRef = db.ref("places");
+  var data = {};
+  var cards = {};
+  var joined = {};
+  var resetting = {};
+  var deepKey = null;
+  var deepSport = null;
+  var deepDone = false;
+
+  try {
+    var j = localStorage.getItem("bsh_joined_v4");
+    joined = j ? JSON.parse(j) : {};
+    if (!joined || typeof joined !== "object") joined = {};
+  } catch (e) { joined = {}; }
+
+  function saveJoined() {
+    try { localStorage.setItem("bsh_joined_v4", JSON.stringify(joined)); } catch (e) {}
+  }
+
+  try {
+    var params = new URLSearchParams(window.location.search);
+    deepKey = params.get("platz");
+    deepSport = params.get("sport");
+  } catch (e) { deepKey = null; deepSport = null; }
+
+  db.ref(".info/connected").on("value", function (snap) {
+    if (snap.val() === true) {
+      connEl.className = "conn on";
+      connText.textContent = "Live verbunden";
+    } else {
+      connEl.className = "conn";
+      connText.textContent = "Verbinde...";
+    }
+  });
+
+  db.ref(".info/serverTimeOffset").on("value", function (snap) {
+    var o = snap.val();
+    serverOffset = typeof o === "number" ? o : 0;
+    refreshAll();
+  });
+
+  function sess(v, sportId) {
+    var s = v && v.sessions && v.sessions[sportId];
+    if (!s || typeof s !== "object") return { players: 0, time: "17:00", date: todayStr(), sid: 0, exists: false };
+    return {
+      players: typeof s.players === "number" && s.players > 0 ? s.players : 0,
+      time: typeof s.time === "string" ? s.time : "17:00",
+      date: typeof s.date === "string" ? s.date : todayStr(),
+      sid: s.sid || 0,
+      exists: true
+    };
+  }
+
+  function isActive(s) {
+    return s.players > 0 && !sessionExpired(s.date, s.time);
+  }
+
+  function tokKey(key, sportId) { return key + "|" + sportId; }
+
+  function isJoined(key, sportId) {
+    var v = data[key];
+    if (!v) return false;
+    var s = sess(v, sportId);
+    if (!isActive(s)) return false;
+    return joined[tokKey(key, sportId)] === String(s.sid);
+  }
+
+  function resetSession(key, sportId) {
+    var rk = tokKey(key, sportId);
+    if (resetting[rk]) return;
+    resetting[rk] = true;
+    var old = null;
+    placesRef.child(key).child("sessions").child(sportId).transaction(function (cur) {
+      old = null;
+      if (!cur || typeof cur !== "object") return;
+      if (!(typeof cur.players === "number" && cur.players > 0)) return;
+      if (!sessionExpired(cur.date || todayStr(), cur.time || "17:00")) return;
+      old = { date: cur.date || todayStr(), time: cur.time || "17:00", players: cur.players, sid: cur.sid || 0 };
+      cur.players = 0;
+      cur.sid = nowMs();
+      return cur;
+    }, function (err, committed) {
+      resetting[rk] = false;
+      if (!err && committed && old) archiveSession(key, sportId, old);
+    });
+  }
+
+  function archiveSession(key, sportId, old) {
+    db.ref("archive/" + key + "/" + sportId + "-" + old.sid).set({
+      sport: sportId,
+      date: old.date,
+      time: old.time,
+      players: old.players,
+      endedAt: nowMs()
+    }).catch(function () {});
+  }
+
+  function placeIsActive(v) {
+    for (var i = 0; i < SPORTS.length; i++) {
+      if (isActive(sess(v, SPORTS[i].id))) return true;
+    }
+    return false;
+  }
+
+  function inMainView(v) {
+    if (placeIsActive(v)) return true;
+    return !!v.createdAt && nowMs() - v.createdAt < NEW_PLACE_MS;
+  }
+
+  function firstStart(v) {
+    var best = Infinity;
+    for (var i = 0; i < SPORTS.length; i++) {
+      var s = sess(v, SPORTS[i].id);
+      if (isActive(s)) {
+        var st = wallStart(s.date, s.time);
+        if (!isNaN(st) && st < best) best = st;
+      }
+    }
+    return best;
+  }
+
+  function checkExpiry() {
+    for (var k in data) {
+      if (!data.hasOwnProperty(k)) continue;
+      for (var i = 0; i < SPORTS.length; i++) {
+        var s = sess(data[k], SPORTS[i].id);
+        if (s.players > 0 && sessionExpired(s.date, s.time)) resetSession(k, SPORTS[i].id);
+      }
+    }
+  }
+
+  function pickDefaultSport(v) {
+    for (var i = 0; i < SPORTS.length; i++) {
+      if (isActive(sess(v, SPORTS[i].id))) return SPORTS[i].id;
+    }
+    return "fussball";
+  }
+
+  function defaultDraftDate() {
+    var today = todayStr();
+    return sessionExpired(today, "17:00") ? addDays(today, 1) : today;
+  }
+
+  function ensureDateOptions(c) {
+    var today = todayStr();
+    if (c.dateBase !== today) {
+      c.dsel.innerHTML = "";
+      for (var i = 0; i < DAYS_AHEAD; i++) {
+        var val = addDays(today, i);
+        var o = document.createElement("option");
+        o.value = val;
+        o.textContent = dateLabel(val);
+        c.dsel.appendChild(o);
+      }
+      c.dateBase = today;
+    }
+    var found = false;
+    for (var k = 0; k < c.dsel.options.length; k++) {
+      if (c.dsel.options[k].value === c.date) { found = true; break; }
+    }
+    if (!found) {
+      var extra = document.createElement("option");
+      extra.value = c.date;
+      extra.textContent = dateLabel(c.date);
+      if (c.date < today) {
+        c.dsel.insertBefore(extra, c.dsel.firstChild);
+      } else {
+        c.dsel.appendChild(extra);
+      }
+    }
+  }
+
+  function buildCard(key) {
+    var card = document.createElement("div");
+    card.className = "card";
+
+    var sportsHtml = "";
+    for (var i = 0; i < SPORTS.length; i++) {
+      sportsHtml += '<button type="button" class="sport" data-sport="' + SPORTS[i].id + '">' +
+        '<span class="ico">' + SPORTS[i].icon + '</span>' + SPORTS[i].name + '<span class="cnt"></span></button>';
+    }
+    var timeHtml = "";
+    for (var t = 0; t < TIMES.length; t++) {
+      timeHtml += '<option value="' + TIMES[t] + '">' + TIMES[t] + ' Uhr</option>';
+    }
+
+    card.innerHTML =
+      '<h2></h2>' +
+      '<div class="sports">' + sportsHtml + '</div>' +
+      '<div class="status">Aktuell <b class="pl">0</b> Spieler angemeldet</div>' +
+      '<div class="timerow"><label>📅 Tag</label><select class="dsel"></select></div>' +
+      '<div class="timerow"><label>🕒 Uhrzeit</label><select class="tsel">' + timeHtml + '</select></div>' +
+      '<button type="button" class="join">Ich bin dabei</button>' +
+      '<button type="button" class="share">🔗 Spiel auf WhatsApp teilen</button>' +
+      '<div class="hist" style="display:none"></div>' +
+      '<div class="chat"><h3>💬 Chat</h3><div class="msgs"></div>' +
+      '<div class="chatrow"><input type="text" maxlength="300" placeholder="Nachricht schreiben...">' +
+      '<button type="button" class="send">Senden</button></div></div>';
+
+    var c = {
+      key: key,
+      el: card,
+      sport: null,
+      date: defaultDraftDate(),
+      time: "17:00",
+      dateBase: null,
+      title: card.querySelector("h2"),
+      sportBtns: card.querySelectorAll(".sport"),
+      pl: card.querySelector(".pl"),
+      dsel: card.querySelector(".dsel"),
+      tsel: card.querySelector(".tsel"),
+      joinBtn: card.querySelector(".join"),
+      shareBtn: card.querySelector(".share"),
+      msgs: card.querySelector(".msgs"),
+      input: card.querySelector(".chatrow input"),
+      sendBtn: card.querySelector(".send"),
+      hist: card.querySelector(".hist"),
+      chatRef: db.ref("chats/" + key).limitToLast(50),
+      histRef: db.ref("archive/" + key).orderByChild("endedAt").limitToLast(3),
+      reportsRef: db.ref("reports/" + key),
+      reports: {},
+      mine: {},
+      msgEls: {},
+      recent: {}
+    };
+
+    c.histRef.on("value", function (snap) {
+      var items = [];
+      snap.forEach(function (ch) {
+        var m = ch.val();
+        if (m && typeof m.date === "string" && typeof m.time === "string" && sportById(m.sport)) items.push(m);
+      });
+      items.sort(function (a, b) { return (b.endedAt || 0) - (a.endedAt || 0); });
+      c.hist.innerHTML = "";
+      if (items.length === 0) {
+        c.hist.style.display = "none";
+        return;
+      }
+      var head = document.createElement("b");
+      head.textContent = "🕘 Zuletzt gespielt";
+      c.hist.appendChild(head);
+      for (var n = 0; n < items.length; n++) {
+        var sp = sportById(items[n].sport);
+        var line = document.createElement("div");
+        line.textContent = sp.icon + " " + sp.name + " · " + dateLabel(items[n].date) + ", " + items[n].time + " Uhr · " + items[n].players + " Spieler";
+        c.hist.appendChild(line);
+      }
+      c.hist.style.display = "";
+    }, function () {
+      c.hist.style.display = "none";
+    });
+
+    for (var s = 0; s < c.sportBtns.length; s++) {
+      (function (btn) {
+        btn.addEventListener("click", function () {
+          c.sport = btn.getAttribute("data-sport");
+          if (data[key]) updateCard(c, data[key]);
+        });
+      })(c.sportBtns[s]);
+    }
+
+    function changeSchedule(field, value) {
+      var v = data[key];
+      if (!v) return;
+      var s = sess(v, c.sport);
+      if (isActive(s)) {
+        var nd = field === "date" ? value : s.date;
+        var nt = field === "time" ? value : s.time;
+        if (sessionExpired(nd, nt)) {
+          updateCard(c, v);
+          toast("Dieser Zeitpunkt ist schon vorbei. Bitte wähle einen späteren.");
+          return;
+        }
+        var upd = {};
+        upd[field] = value;
+        placesRef.child(key).child("sessions").child(c.sport).update(upd).catch(function () {
+          toast("Konnte die Änderung nicht speichern.");
+        });
+      } else {
+        c[field] = value;
+      }
+    }
+
+    c.dsel.addEventListener("change", function () { changeSchedule("date", c.dsel.value); });
+    c.tsel.addEventListener("change", function () { changeSchedule("time", c.tsel.value); });
+
+    c.joinBtn.addEventListener("click", function () {
+      var v = data[key];
+      if (!v) return;
+      var sp = c.sport;
+      var s = sess(v, sp);
+      var active = isActive(s);
+      var wasJoined = isJoined(key, sp);
+      var joinDate = active ? s.date : c.date;
+      var joinTime = active ? s.time : c.time;
+      if (!wasJoined && sessionExpired(joinDate, joinTime)) {
+        toast("Dieser Zeitpunkt ist schon vorbei. Bitte wähle einen späteren.");
+        return;
+      }
+      var tk = tokKey(key, sp);
+      var prev = joined[tk];
+      var expiredOld = null;
+      placesRef.child(key).child("sessions").child(sp).transaction(function (cur) {
+        expiredOld = null;
+        cur = cur && typeof cur === "object" ? cur : {};
+        var n = typeof cur.players === "number" && cur.players > 0 ? cur.players : 0;
+        if (n > 0 && sessionExpired(cur.date || todayStr(), cur.time || "17:00")) {
+          expiredOld = { date: cur.date || todayStr(), time: cur.time || "17:00", players: n, sid: cur.sid || 0 };
+          n = 0;
+          cur.sid = nowMs();
+        }
+        if (wasJoined) {
+          if (n <= 0) return;
+          cur.players = n - 1;
+          delete joined[tk];
+        } else {
+          if (n === 0) {
+            cur.date = joinDate;
+            cur.time = joinTime;
+            cur.sid = nowMs();
+          }
+          cur.players = n + 1;
+          joined[tk] = String(cur.sid || 0);
+        }
+        return cur;
+      }, function (err, committed, snap) {
+        if (err) {
+          if (prev === undefined) { delete joined[tk]; } else { joined[tk] = prev; }
+          saveJoined();
+          updateCard(c, data[key] || v);
+          toast("Das hat leider nicht geklappt. Bitte nochmal versuchen.");
+          return;
+        }
+        if (!committed) {
+          delete joined[tk];
+          saveJoined();
+          updateCard(c, data[key] || v);
+          return;
+        }
+        if (expiredOld) archiveSession(key, sp, expiredOld);
+        var val = snap && snap.val();
+        if (!wasJoined && val) joined[tk] = String(val.sid || 0);
+        saveJoined();
+        updateCard(c, data[key] || v);
+      });
+    });
+
+    c.shareBtn.addEventListener("click", function () {
+      var v = data[key];
+      if (!v) return;
+      var sp = sportById(c.sport) || sportById("fussball");
+      var s = sess(v, sp.id);
+      var active = isActive(s);
+      var date = active ? s.date : c.date;
+      var time = active ? s.time : c.time;
+      var label = dateLabel(date);
+      var when = label === "Heute" ? "Heute" : (label === "Morgen" ? "Morgen" : "Am " + label);
+      var base = window.location.href.split("#")[0].split("?")[0];
+      var link = base + "?platz=" + encodeURIComponent(key) + "&sport=" + encodeURIComponent(sp.id);
+      var text = "Wer hat Bock? " + when + " um " + time + " Uhr " + sp.icon + " " + sp.verb +
+        " am " + v.name + "! Trag dich auch ein: " + link;
+      window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+    });
+
+    var lastSendAt = 0;
+    function send() {
+      var text = c.input.value.trim();
+      if (!text) return;
+      var problem = chatProblem(text);
+      if (problem) {
+        c.input.value = "";
+        toast(problem);
+        return;
+      }
+      var dupKey = text.toLowerCase();
+      if (c.recent[dupKey] && Date.now() - c.recent[dupKey] < 60000) {
+        toast("Diese Nachricht hast du gerade schon gesendet.");
+        return;
+      }
+      if (Date.now() - lastSendAt < 3000) {
+        toast("Bitte kurz warten, bevor du die nächste Nachricht sendest.");
+        return;
+      }
+      lastSendAt = Date.now();
+      c.recent[dupKey] = Date.now();
+      c.input.value = "";
+      db.ref("chats/" + key).push({ text: text, ts: nowMs() }).catch(function () {
+        c.input.value = text;
+        toast("Nachricht konnte nicht gesendet werden.");
+      });
+      c.input.focus();
+    }
+    c.sendBtn.addEventListener("click", send);
+    c.input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); send(); }
+    });
+
+    c.chatRef.on("child_added", function (snap) {
+      var m = snap.val();
+      if (!m || typeof m.text !== "string") return;
+      if (chatProblem(m.text)) return;
+      var msgId = snap.key;
+      var atBottom = c.msgs.scrollTop + c.msgs.clientHeight >= c.msgs.scrollHeight - 30;
+      var div = document.createElement("div");
+      div.className = "msg";
+      div.appendChild(document.createTextNode(m.text));
+      var small = document.createElement("small");
+      small.textContent = "Anonym · " + timeOf(m.ts);
+      div.appendChild(small);
+      var rep = document.createElement("button");
+      rep.type = "button";
+      rep.className = "rep";
+      rep.title = "Nachricht melden";
+      rep.textContent = "🚩";
+      rep.addEventListener("click", function () {
+        if (!window.confirm("Diese Nachricht als unpassend melden?")) return;
+        c.mine[msgId] = true;
+        applyReports(c);
+        db.ref("reports/" + key + "/" + msgId + "/" + deviceId).set(true).then(function () {
+          toast("Danke, die Nachricht wurde gemeldet.");
+        }).catch(function () {
+          toast("Die Meldung konnte nicht gespeichert werden, die Nachricht ist nur für dich ausgeblendet.");
+        });
+      });
+      div.appendChild(rep);
+      c.msgEls[msgId] = div;
+      c.msgs.appendChild(div);
+      applyReports(c);
+      while (c.msgs.children.length > 50) c.msgs.removeChild(c.msgs.firstChild);
+      if (atBottom || c.msgs.children.length === 1) c.msgs.scrollTop = c.msgs.scrollHeight;
+    });
+
+    c.reportsRef.on("value", function (snap) {
+      c.reports = snap.val() || {};
+      applyReports(c);
+    }, function () {});
+
+    return c;
+  }
+
+  function applyReports(c) {
+    for (var id in c.msgEls) {
+      if (!c.msgEls.hasOwnProperty(id)) continue;
+      var r = c.reports[id];
+      var count = r && typeof r === "object" ? Object.keys(r).length : 0;
+      var mine = !!c.mine[id] || !!(r && r[deviceId]);
+      c.msgEls[id].style.display = (mine || count >= REPORT_LIMIT) ? "none" : "";
+    }
+  }
+
+  function updateCard(c, v) {
+    if (!c.sport) c.sport = pickDefaultSport(v);
+    c.title.textContent = "📍 " + v.name;
+
+    for (var i = 0; i < c.sportBtns.length; i++) {
+      var id = c.sportBtns[i].getAttribute("data-sport");
+      var si = sess(v, id);
+      c.sportBtns[i].className = "sport" + (id === c.sport ? " active" : "");
+      c.sportBtns[i].querySelector(".cnt").textContent = isActive(si) ? "👥 " + si.players : "";
+    }
+
+    var s = sess(v, c.sport);
+    var active = isActive(s);
+    if (active) {
+      c.date = s.date;
+      c.time = s.time;
+    } else {
+      if (c.date < todayStr()) c.date = todayStr();
+      if (sessionExpired(c.date, c.time)) c.date = addDays(todayStr(), 1);
+    }
+    ensureDateOptions(c);
+    c.dsel.value = c.date;
+    if (document.activeElement !== c.tsel || active) c.tsel.value = c.time;
+
+    c.pl.textContent = active ? s.players : 0;
+
+    var joinedNow = isJoined(c.key, c.sport);
+    c.joinBtn.className = "join" + (joinedNow ? " leave" : "");
+    c.joinBtn.textContent = joinedNow ? "Absagen" : "Ich bin dabei";
+  }
+
+  function refreshAll() {
+    for (var k in cards) {
+      if (cards.hasOwnProperty(k) && data[k]) updateCard(cards[k], data[k]);
+    }
+    applyFilter();
+    renderDash();
+    checkExpiry();
+  }
+
+  function jumpToPlace(key, sportId) {
+    var pv = data[key];
+    if (!pv) return;
+    searchEl.value = inMainView(pv) ? "" : pv.name;
+    selected = null;
+    sugSeq++;
+    suggestions = [];
+    suggestState = "idle";
+    renderSuggest();
+    renderCreate();
+    applyFilter();
+    var c = cards[key];
+    if (!c) return;
+    if (sportId) c.sport = sportId;
+    if (data[key]) updateCard(c, data[key]);
+    c.el.scrollIntoView({ behavior: "smooth", block: "start" });
+    c.el.className = "card flash";
+    setTimeout(function () {
+      if (c.el) c.el.className = "card";
+    }, 1800);
+  }
+
+  function renderDash() {
+    var items = [];
+    for (var k in data) {
+      if (!data.hasOwnProperty(k)) continue;
+      for (var i = 0; i < SPORTS.length; i++) {
+        var s = sess(data[k], SPORTS[i].id);
+        if (isActive(s)) {
+          items.push({ key: k, sport: SPORTS[i], s: s, start: wallStart(s.date, s.time) });
+        }
+      }
+    }
+    if (items.length === 0) {
+      showDashEmpty();
+      return;
+    }
+    items.sort(function (a, b) {
+      if (a.start !== b.start) return a.start - b.start;
+      return b.s.players - a.s.players;
+    });
+    dashList.innerHTML = "";
+    for (var n = 0; n < items.length; n++) {
+      (function (it) {
+        var v = data[it.key];
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "dash-item";
+
+        var main = document.createElement("span");
+        main.className = "dash-main";
+        var nm = document.createElement("span");
+        nm.className = "dash-name";
+        nm.textContent = "📍 " + v.name;
+        var sub = document.createElement("span");
+        sub.className = "dash-sub";
+        sub.textContent = it.sport.icon + " " + it.sport.name + " · 🕒 " + dateLabel(it.s.date) + ", " + it.s.time + " Uhr";
+        main.appendChild(nm);
+        main.appendChild(sub);
+
+        var cnt = document.createElement("span");
+        cnt.className = "dash-count";
+        cnt.textContent = "👥 " + it.s.players;
+
+        btn.appendChild(main);
+        btn.appendChild(cnt);
+        btn.addEventListener("click", function () { jumpToPlace(it.key, it.sport.id); });
+        dashList.appendChild(btn);
+      })(items[n]);
+    }
+  }
+
+  function placeInto(container, keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var node = cards[keys[i]].el;
+      if (container.children[i] !== node) container.insertBefore(node, container.children[i] || null);
+    }
+  }
+
+  function applyFilter() {
+    var q = norm(searchEl.value);
+    var total = 0;
+    var main = [];
+    var arch = [];
+    var rest = [];
+    for (var k in cards) {
+      if (!cards.hasOwnProperty(k)) continue;
+      total++;
+      var v = data[k];
+      var match = !!v && (!q || norm(v.name).indexOf(q) !== -1);
+      if (!match) { rest.push(k); continue; }
+      if (q || inMainView(v)) { main.push(k); } else { arch.push(k); }
+    }
+    main.sort(function (a, b) {
+      var fa = firstStart(data[a]);
+      var fb = firstStart(data[b]);
+      if (fa !== fb) return fa < fb ? -1 : 1;
+      return (data[b].createdAt || 0) - (data[a].createdAt || 0);
+    });
+    arch.sort(function (a, b) {
+      return (data[b].createdAt || 0) - (data[a].createdAt || 0);
+    });
+    placeInto(listEl, main);
+    placeInto(archiveListEl, arch);
+    placeInto(hiddenListEl, rest);
+
+    if (arch.length > 0 && !q) {
+      archiveBox.style.display = "";
+      archiveToggle.textContent = "📁 Archiv · " + arch.length + (arch.length === 1 ? " Platz" : " Plätze") +
+        " ohne aktives Spiel " + (archiveOpen ? "▾" : "▸");
+      archiveListEl.style.display = archiveOpen ? "" : "none";
+    } else {
+      archiveBox.style.display = "none";
+    }
+
+    if (total === 0) {
+      emptyArea.innerHTML = '<div class="empty"><span class="big">🏟️</span>Noch nichts los hier.<br>Tippe oben den Namen eines Parks oder Bolzplatzes ein und wähle ihn aus der Liste.</div>';
+    } else if (q && main.length === 0) {
+      emptyArea.innerHTML = '<div class="empty">Noch kein aktivierter Platz mit diesem Namen.<br>Wähle ihn oben aus der Liste, um ihn zu aktivieren.</div>';
+    } else if (!q && main.length === 0) {
+      emptyArea.innerHTML = '<div class="empty">Aktuell läuft kein Spiel.<br>Such deinen Platz oben oder öffne das Archiv.</div>';
+    } else {
+      emptyArea.innerHTML = "";
+    }
+  }
+
+  archiveToggle.addEventListener("click", function () {
+    archiveOpen = !archiveOpen;
+    applyFilter();
+  });
+
+  var BERLIN = { minLat: 52.338, maxLat: 52.675, minLon: 13.088, maxLon: 13.761 };
+  var LEISURE_KINDS = {
+    park: "Park", pitch: "Sport-/Bolzplatz", sports_centre: "Sportanlage", stadium: "Stadion",
+    playground: "Spielplatz", garden: "Garten", nature_reserve: "Naturschutzgebiet", track: "Laufbahn",
+    common: "Grünfläche", dog_park: "Hundepark", beach_resort: "Strandbad"
+  };
+
+  function normName(s) {
+    var t = foldDiacritics(String(s).toLowerCase().replace(/ß/g, "ss"));
+    return t.replace(/[^a-z0-9]+/g, " ").trim();
+  }
+
+  function distKm(lat1, lon1, lat2, lon2) {
+    var rad = Math.PI / 180;
+    var dLat = (lat2 - lat1) * rad;
+    var dLon = (lon2 - lon1) * rad;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function findExisting(s) {
+    if (data[s.key]) return s.key;
+    var nn = normName(s.name);
+    for (var k in data) {
+      if (!data.hasOwnProperty(k)) continue;
+      var v = data[k];
+      if (normName(v.name) !== nn) continue;
+      if (typeof v.lat !== "number" || typeof v.lon !== "number") return k;
+      if (distKm(v.lat, v.lon, s.lat, s.lon) < 1.5) return k;
+    }
+    return null;
+  }
+
+  function existsByName(raw) {
+    var nn = normName(raw);
+    if (!nn) return false;
+    for (var k in data) {
+      if (data.hasOwnProperty(k) && normName(data[k].name) === nn) return true;
+    }
+    return false;
+  }
+
+  function parseFeatures(json) {
+    var out = [];
+    var seen = {};
+    var fs = json && json.features;
+    if (!Array.isArray(fs)) return out;
+    for (var i = 0; i < fs.length && out.length < 8; i++) {
+      var f = fs[i] || {};
+      var p = f.properties || {};
+      var g = f.geometry && f.geometry.coordinates;
+      if (!Array.isArray(g) || g.length < 2) continue;
+      var lon = Number(g[0]);
+      var lat = Number(g[1]);
+      if (isNaN(lat) || isNaN(lon)) continue;
+      if (lat < BERLIN.minLat || lat > BERLIN.maxLat || lon < BERLIN.minLon || lon > BERLIN.maxLon) continue;
+      var name = typeof p.name === "string" ? p.name.trim() : "";
+      if (!name || name.length > 60) continue;
+      if (p.osm_key !== "leisure" || !LEISURE_KINDS.hasOwnProperty(p.osm_value)) continue;
+      if (p.state && p.state !== "Berlin") continue;
+      var type = String(p.osm_type || "").toLowerCase();
+      if (type !== "n" && type !== "w" && type !== "r") continue;
+      var osm = type + String(p.osm_id);
+      if (!/^[nwr][0-9]{1,15}$/.test(osm)) continue;
+      var key = "osm-" + osm;
+      var nkey = normName(name) + "|" + lat.toFixed(2) + "|" + lon.toFixed(2);
+      if (seen[key] || seen[nkey]) continue;
+      seen[key] = true;
+      seen[nkey] = true;
+      out.push({
+        key: key,
+        osm: osm,
+        name: name,
+        lat: Math.round(lat * 100000) / 100000,
+        lon: Math.round(lon * 100000) / 100000,
+        area: String(p.district || p.locality || p.suburb || p.city || "").slice(0, 80),
+        kind: LEISURE_KINDS[p.osm_value]
+      });
+    }
+    return out;
+  }
+
+  function fetchSuggestions(rawQ) {
+    var q = rawQ.trim().replace(/\s+/g, " ");
+    if (q.length < 2) {
+      sugSeq++;
+      suggestions = [];
+      suggestState = "idle";
+      renderSuggest();
+      updateMap();
+      return;
+    }
+    var ck = q.toLowerCase();
+    if (sugCache[ck]) {
+      suggestions = sugCache[ck];
+      suggestState = suggestions.length ? "ok" : "empty";
+      renderSuggest();
+      renderCreate();
+      updateMap();
+      return;
+    }
+    if (typeof fetch !== "function") {
+      suggestState = "error";
+      renderSuggest();
+      return;
+    }
+    suggestState = "loading";
+    renderSuggest();
+    var seq = ++sugSeq;
+    var url = "https://photon.komoot.io/api/?q=" + encodeURIComponent(q) +
+      "&limit=15&lang=de&lat=52.52&lon=13.405&bbox=" + BERLIN.minLon + "," + BERLIN.minLat + "," +
+      BERLIN.maxLon + "," + BERLIN.maxLat + "&osm_tag=leisure";
+    fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("http");
+      return r.json();
+    }).then(function (j) {
+      if (seq !== sugSeq) return;
+      var list = parseFeatures(j);
+      sugCache[ck] = list;
+      suggestions = list;
+      suggestState = list.length ? "ok" : "empty";
+      renderSuggest();
+      renderCreate();
+      updateMap();
+    }).catch(function () {
+      if (seq !== sugSeq) return;
+      suggestions = [];
+      suggestState = "error";
+      renderSuggest();
+      updateMap();
+    });
+  }
+
+  function renderSuggest() {
+    suggestEl.innerHTML = "";
+    var q = searchEl.value.trim();
+    if (q.length < 2 || suggestState === "idle") return;
+    var box = document.createElement("div");
+    box.className = "sug-box";
+    if (suggestState === "loading") {
+      var l = document.createElement("div");
+      l.className = "sug-info";
+      l.textContent = "Suche Orte in Berlin ...";
+      box.appendChild(l);
+    } else if (suggestState === "error") {
+      var er = document.createElement("div");
+      er.className = "sug-info";
+      er.textContent = "Die Ortssuche ist gerade nicht erreichbar. Bitte prüfe dein Internet und versuche es gleich nochmal.";
+      box.appendChild(er);
+    } else if (suggestState === "empty") {
+      var em = document.createElement("div");
+      em.className = "sug-info";
+      em.textContent = "Keinen passenden Park oder Sportplatz in Berlin gefunden. Es können nur echte Orte aktiviert werden.";
+      box.appendChild(em);
+    } else {
+      for (var i = 0; i < suggestions.length; i++) {
+        (function (s) {
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "sug-item";
+          var main = document.createElement("span");
+          main.className = "sug-main";
+          var nm = document.createElement("span");
+          nm.className = "sug-name";
+          nm.textContent = "📍 " + s.name;
+          var sub = document.createElement("span");
+          sub.className = "sug-sub";
+          sub.textContent = s.kind + (s.area ? " · " + s.area : "");
+          main.appendChild(nm);
+          main.appendChild(sub);
+          var badge = document.createElement("span");
+          badge.className = "sug-badge";
+          badge.textContent = findExisting(s) ? "✅ aktiv" : "➕ neu";
+          btn.appendChild(main);
+          btn.appendChild(badge);
+          btn.addEventListener("click", function () { pickSuggestion(s); });
+          box.appendChild(btn);
+        })(suggestions[i]);
+      }
+    }
+    suggestEl.appendChild(box);
+  }
+
+  function pickSuggestion(s) {
+    var ex = findExisting(s);
+    sugSeq++;
+    suggestions = [];
+    suggestState = "idle";
+    if (ex) {
+      selected = null;
+      renderSuggest();
+      jumpToPlace(ex, null);
+      toast("Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
+      return;
+    }
+    selected = s;
+    searchEl.value = s.name;
+    renderSuggest();
+    renderCreate();
+    applyFilter();
+    updateMap();
+  }
+
+  function renderCreate() {
+    var raw = searchEl.value.trim().replace(/\s+/g, " ");
+    createArea.innerHTML = "";
+    if (!raw) return;
+    if (selected && normName(selected.name) === normName(raw)) {
+      var sel = selected;
+      var ex = findExisting(sel);
+      if (ex) {
+        var info = document.createElement("div");
+        info.className = "create-info";
+        info.appendChild(document.createTextNode("✅ " + sel.name + " gibt es schon. Melde dich direkt dort an."));
+        var go = document.createElement("button");
+        go.type = "button";
+        go.textContent = "Zum Platz";
+        go.addEventListener("click", function () { jumpToPlace(ex, null); });
+        info.appendChild(go);
+        createArea.appendChild(info);
+        return;
+      }
+      var btn = document.createElement("button");
+      btn.className = "create-btn";
+      btn.type = "button";
+      btn.textContent = "📍 '+ " + sel.name + " in Berlin aktivieren'";
+      btn.addEventListener("click", function () { createPlace(sel); });
+      createArea.appendChild(btn);
+      return;
+    }
+    if (raw.length >= 2 && !existsByName(raw)) {
+      var hint = document.createElement("div");
+      hint.className = "create-hint";
+      hint.textContent = "Neuen Platz anlegen? Wähle ihn unten aus der Liste. Es sind nur echte Parks und Sportplätze in Berlin möglich.";
+      createArea.appendChild(hint);
+    }
+  }
+
+  function createPlace(sel) {
+    var ex = findExisting(sel);
+    if (ex) {
+      selected = null;
+      jumpToPlace(ex, null);
+      toast("Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
+      return;
+    }
+    var rec = { name: sel.name, createdAt: nowMs(), osm: sel.osm, lat: sel.lat, lon: sel.lon };
+    if (sel.area) rec.area = sel.area;
+    if (sel.kind) rec.kind = sel.kind;
+    placesRef.child(sel.key).transaction(function (cur) {
+      if (cur === null) return rec;
+      return;
+    }, function (err, committed) {
+      if (err) {
+        toast("Platz konnte nicht erstellt werden. Prüfe deine Internetverbindung.");
+        return;
+      }
+      toast(committed ? "Platz aktiviert! Jetzt für alle sichtbar. ✅" : "Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
+      selected = null;
+      searchEl.value = sel.name;
+      renderCreate();
+      applyFilter();
+      updateMap();
+      setTimeout(function () {
+        if (cards[sel.key]) cards[sel.key].el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    });
+  }
+
+  function makeTip(text, sub) {
+    var d = document.createElement("div");
+    var b = document.createElement("b");
+    b.textContent = text;
+    d.appendChild(b);
+    if (sub) {
+      d.appendChild(document.createElement("br"));
+      d.appendChild(document.createTextNode(sub));
+    }
+    return d;
+  }
+
+  function updateMap() {
+    if (!mapObj || !mapLayer) return;
+    mapLayer.clearLayers();
+    var pts = [];
+    var known = [];
+    var legacy = 0;
+    for (var k in data) {
+      if (!data.hasOwnProperty(k)) continue;
+      var v = data[k];
+      if (typeof v.lat !== "number" || typeof v.lon !== "number") { legacy++; continue; }
+      known.push([v.lat, v.lon]);
+      (function (key, pv) {
+        var act = placeIsActive(pv);
+        var m = L.circleMarker([pv.lat, pv.lon], {
+          radius: act ? 12 : 9, color: "#065f46", weight: 2, fillColor: "#10b981", fillOpacity: act ? 0.95 : 0.6
+        });
+        m.bindTooltip(makeTip(pv.name, act ? "Spiel läuft – tippen zum Anmelden" : "Platz aktiviert"));
+        m.on("click", function () { jumpToPlace(key, null); });
+        m.addTo(mapLayer);
+      })(k, v);
+    }
+    for (var i = 0; i < suggestions.length; i++) {
+      (function (s) {
+        if (findExisting(s)) return;
+        var m = L.circleMarker([s.lat, s.lon], { radius: 10, color: "#1d4ed8", weight: 2, fillColor: "#3b82f6", fillOpacity: 0.85 });
+        m.bindTooltip(makeTip(s.name, s.kind + (s.area ? " · " + s.area : "")));
+        m.on("click", function () { pickSuggestion(s); });
+        m.addTo(mapLayer);
+        pts.push([s.lat, s.lon]);
+      })(suggestions[i]);
+    }
+    if (selected && !findExisting(selected)) {
+      var sm = L.circleMarker([selected.lat, selected.lon], { radius: 13, color: "#b45309", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.95 });
+      sm.bindTooltip(makeTip(selected.name, "Deine Auswahl"));
+      sm.addTo(mapLayer);
+      pts = [[selected.lat, selected.lon]];
+    }
+    if (pts.length > 0) {
+      try { mapObj.fitBounds(pts, { padding: [30, 30], maxZoom: 15 }); } catch (e) {}
+    } else if (known.length > 0) {
+      try { mapObj.fitBounds(known, { padding: [30, 30], maxZoom: 14 }); } catch (e) {}
+    }
+    var hintEl = document.getElementById("mapHint");
+    if (hintEl) {
+      var msg = "";
+      if (known.length === 0 && pts.length === 0) {
+        msg = "Noch keine Plätze auf der Karte. Suche oben nach einem Park oder Bolzplatz und wähle ihn aus, dann erscheint er hier.";
+      } else if (legacy > 0) {
+        msg = legacy + (legacy === 1 ? " älterer Platz hat" : " ältere Plätze haben") + " keinen Standort und " + (legacy === 1 ? "erscheint" : "erscheinen") + " nicht auf der Karte.";
+      }
+      hintEl.textContent = msg;
+    }
+  }
+
+  if (typeof L !== "undefined" && L && typeof L.map === "function") {
+    mapToggle.style.display = "";
+    mapToggle.addEventListener("click", function () {
+      mapOpen = !mapOpen;
+      mapWrap.style.display = mapOpen ? "" : "none";
+      mapToggle.textContent = mapOpen ? "🗺️ Karte ausblenden" : "🗺️ Karte anzeigen";
+      if (mapOpen && !mapObj) {
+        mapObj = L.map("map", { zoomControl: true }).setView([52.52, 13.405], 11);
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19, attribution: "&copy; OpenStreetMap-Mitwirkende"
+        }).addTo(mapObj);
+        mapLayer = L.layerGroup().addTo(mapObj);
+      }
+      if (mapOpen && mapObj) {
+        setTimeout(function () { mapObj.invalidateSize(); updateMap(); }, 60);
+      }
+    });
+  }
+
+  function sync() {
+    var keys = Object.keys(data);
+    keys.sort(function (a, b) {
+      return (data[b].createdAt || 0) - (data[a].createdAt || 0);
+    });
+
+    for (var existing in cards) {
+      if (cards.hasOwnProperty(existing) && !data[existing]) {
+        cards[existing].chatRef.off();
+        cards[existing].histRef.off();
+        cards[existing].reportsRef.off();
+        if (cards[existing].el.parentNode) cards[existing].el.parentNode.removeChild(cards[existing].el);
+        delete cards[existing];
+      }
+    }
+
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (!cards[k]) cards[k] = buildCard(k);
+      if (!deepDone && deepKey === k && deepSport && sportById(deepSport)) cards[k].sport = deepSport;
+      updateCard(cards[k], data[k]);
+    }
+
+    if (!deepDone && deepKey) {
+      deepDone = true;
+      if (data[deepKey]) {
+        searchEl.value = data[deepKey].name;
+      }
+    }
+
+    renderCreate();
+    applyFilter();
+    renderDash();
+    updateMap();
+    checkExpiry();
+  }
+
+  showDashEmpty();
+
+  var firstLoad = true;
+  placesRef.on("value", function (snap) {
+    var val = snap.val() || {};
+    var clean = {};
+    for (var k in val) {
+      if (val.hasOwnProperty(k) && val[k] && typeof val[k].name === "string") clean[k] = val[k];
+    }
+    data = clean;
+    sync();
+    if (firstLoad) {
+      firstLoad = false;
+      if (deepKey && data[deepKey] && cards[deepKey]) {
+        setTimeout(function () {
+          cards[deepKey].el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 300);
+      }
+    }
+  }, function () {
+    toast("Zugriff auf die Datenbank verweigert. Prüfe die Regeln in Firebase.");
+    connText.textContent = "Kein Zugriff";
+  });
+
+  setInterval(refreshAll, 60000);
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) refreshAll();
+  });
+
+  searchEl.addEventListener("input", function () {
+    if (selected && normName(searchEl.value) !== normName(selected.name)) selected = null;
+    renderCreate();
+    applyFilter();
+    if (sugTimer) clearTimeout(sugTimer);
+    if (searchEl.value.trim().length < 2) {
+      fetchSuggestions("");
+    } else {
+      suggestState = "loading";
+      renderSuggest();
+      sugTimer = setTimeout(function () { fetchSuggestions(searchEl.value); }, 350);
+    }
+  });
+  searchEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      var btn = createArea.querySelector(".create-btn");
+      if (btn) {
+        btn.click();
+      } else if (suggestions.length > 0 && suggestState === "ok") {
+        pickSuggestion(suggestions[0]);
+      }
+      searchEl.blur();
+    }
+  });
+})();
+</script>
+</body>
+</html>
