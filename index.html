@@ -17,7 +17,57 @@
     padding: 0 0 40px 0;
     -webkit-overflow-scrolling: touch;
   }
-  header { padding: 26px 18px 8px 18px; text-align: center; }
+  header { position: relative; padding: 26px 18px 8px 18px; text-align: center; }
+  .acc-btn {
+    position: absolute; top: 12px; right: 12px; padding: 8px 12px; font-family: inherit; font-size: 13px; font-weight: 700;
+    color: #ffffff; background: #2f3338; border: 2px solid #3a3f46; border-radius: 14px; cursor: pointer;
+  }
+  .acc-btn.alert { background: #10b981; border-color: #10b981; }
+  .acc-panel { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 40; overflow-y: auto; background: #25282d; -webkit-overflow-scrolling: touch; }
+  .acc-inner { max-width: 560px; margin: 0 auto; padding: 0 14px 40px 14px; }
+  .acc-head { position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 14px 0; background: #25282d; z-index: 2; }
+  .acc-head .acc-title { flex: 1; text-align: center; font-size: 18px; font-weight: 800; }
+  .acc-icon { width: 40px; height: 40px; font-size: 20px; color: #ffffff; background: #2f3338; border: 2px solid #3a3f46; border-radius: 12px; cursor: pointer; }
+  .acc-tabs { display: flex; gap: 6px; margin: 4px 0 14px 0; }
+  .acc-tab {
+    flex: 1; padding: 10px 4px; font-family: inherit; font-size: 13px; font-weight: 700; color: #c9ced4;
+    background: #2f3338; border: 2px solid #3a3f46; border-radius: 12px; cursor: pointer;
+  }
+  .acc-tab.on { color: #ffffff; background: #10b981; border-color: #10b981; }
+  .acc-card { margin-bottom: 14px; padding: 16px; background: #2f3338; border: 2px solid #3a3f46; border-radius: 18px; }
+  .acc-card h2, .acc-card h3 { margin: 0 0 8px 0; font-size: 18px; }
+  .acc-note { margin: 0 0 12px 0; font-size: 13px; line-height: 1.45; color: #9aa0a8; }
+  .acc-field { display: block; margin-bottom: 10px; }
+  .acc-label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; color: #c9ced4; }
+  .acc-input {
+    width: 100%; padding: 13px; font-size: 16px; color: #ffffff; background: #25282d;
+    border: 2px solid #3a3f46; border-radius: 12px; outline: none;
+  }
+  .acc-input:focus { border-color: #10b981; }
+  .acc-check { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 12px 0; font-size: 13px; line-height: 1.4; color: #c9ced4; }
+  .acc-check input { margin-top: 2px; width: 20px; height: 20px; flex-shrink: 0; }
+  .acc-btn2 {
+    display: block; width: 100%; margin-top: 8px; padding: 13px; font-family: inherit; font-size: 16px; font-weight: 800;
+    color: #ffffff; background: #10b981; border: none; border-radius: 12px; cursor: pointer;
+  }
+  .acc-btn2.ghost { color: #c9ced4; background: transparent; border: 2px solid #3a3f46; font-weight: 700; }
+  .acc-btn2.danger { background: #ef4444; }
+  .acc-btn2:disabled { opacity: 0.5; }
+  .acc-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid #3a3f46; }
+  .acc-row:first-of-type { border-top: none; }
+  .acc-main { flex: 1; min-width: 0; }
+  .acc-name { font-size: 16px; font-weight: 800; word-break: break-word; }
+  .acc-sub { margin-top: 2px; font-size: 13px; color: #9aa0a8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acc-dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; background: #10b981; }
+  .acc-mini { flex-shrink: 0; padding: 9px 12px; font-family: inherit; font-size: 14px; font-weight: 700; color: #ffffff; background: #10b981; border: none; border-radius: 10px; cursor: pointer; }
+  .acc-mini.ghost { color: #c9ced4; background: #25282d; border: 2px solid #3a3f46; }
+  .acc-code { font-size: 32px; font-weight: 800; letter-spacing: 6px; text-align: center; color: #10b981; margin: 6px 0 10px 0; }
+  .dm-list { min-height: 200px; max-height: 55vh; overflow-y: auto; padding: 10px; margin-bottom: 10px; background: #2f3338; border: 2px solid #3a3f46; border-radius: 16px; }
+  .dm-msg { max-width: 82%; margin: 0 0 8px 0; padding: 8px 12px; font-size: 15px; line-height: 1.35; word-break: break-word; background: #ffffff; color: #1f2328; border-radius: 14px 14px 14px 4px; }
+  .dm-msg.mine { margin-left: auto; color: #ffffff; background: #10b981; border-radius: 14px 14px 4px 14px; }
+  .dm-msg small { display: block; margin-top: 2px; font-size: 11px; opacity: 0.7; }
+  .dm-empty { padding: 20px 8px; text-align: center; font-size: 14px; color: #9aa0a8; }
+  .nick-link { font-weight: 700; color: #067a56; text-decoration: underline; cursor: pointer; }
   header h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 0.3px; }
   header h1 span { color: #10b981; }
   header p { margin: 6px 0 0 0; color: #9aa0a8; font-size: 14px; }
@@ -243,6 +293,7 @@
 <body>
 
 <header>
+  <button type="button" class="acc-btn" id="accBtn" style="display:none">👤 Anmelden</button>
   <h1>Berlin <span>Sports</span> Hub</h1>
   <p>Finde Mitspieler an Parks &amp; Bolzplätzen in ganz Berlin</p>
   <div class="conn" id="conn"><i></i><span id="connText">Verbinde...</span></div>
@@ -284,14 +335,27 @@
   <div class="hint">Alle Plätze, Spielerzahlen und Chats sind live für alle Nutzer sichtbar. Chats sind anonym, außer du wählst einen Spitznamen. Spiele werden 2 Stunden nach der Uhrzeit (Berliner Zeit) automatisch zurückgesetzt.</div>
 </div>
 
+<div class="acc-panel" id="accPanel" style="display:none">
+  <div class="acc-inner">
+    <div class="acc-head">
+      <button type="button" class="acc-icon" id="accBack" style="visibility:hidden">‹</button>
+      <div class="acc-title" id="accTitle">Konto</div>
+      <button type="button" class="acc-icon" id="accClose">✕</button>
+    </div>
+    <div id="accBody"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function () {
   var DATABASE_URL = "https://berlin-sports-4a33b-default-rtdb.europe-west1.firebasedatabase.app";
+  var FIREBASE_WEB_CONFIG = { apiKey: "", authDomain: "", projectId: "", appId: "" };
   var EXPIRE_MS = 2 * 60 * 60 * 1000;
   var NEW_PLACE_MS = 24 * 60 * 60 * 1000;
   var DAYS_AHEAD = 7;
@@ -685,7 +749,14 @@
 
   var db;
   try {
-    firebase.initializeApp({ databaseURL: DATABASE_URL });
+    var fbConfig = { databaseURL: DATABASE_URL };
+    if (FIREBASE_WEB_CONFIG.apiKey) {
+      fbConfig.apiKey = FIREBASE_WEB_CONFIG.apiKey;
+      fbConfig.authDomain = FIREBASE_WEB_CONFIG.authDomain;
+      fbConfig.projectId = FIREBASE_WEB_CONFIG.projectId;
+      fbConfig.appId = FIREBASE_WEB_CONFIG.appId;
+    }
+    firebase.initializeApp(fbConfig);
     db = firebase.database();
   } catch (e) {
     listEl.innerHTML = '<div class="setup"><h2>Fehler</h2>Die Datenbank-Adresse scheint ungültig zu sein. Bitte prüfe die DATABASE_URL im Code.</div>';
@@ -1046,6 +1117,17 @@
         if (expiredOld) archiveSession(key, sp, expiredOld);
         var val = snap && snap.val();
         if (!wasJoined && val) joined[tk] = String(val.sid || 0);
+        if (authUser && profile) {
+          if (!wasJoined && val) {
+            var pk = key + "_" + sp + "_" + (val.sid || 0);
+            db.ref("played/" + pk + "/" + authUser.uid).set(profile.nick).catch(function () {});
+            db.ref("history/" + authUser.uid).push({
+              key: pk, place: String(v.name).slice(0, 60), sport: sp, date: val.date, time: val.time
+            }).catch(function () {});
+          } else if (wasJoined && prev) {
+            db.ref("played/" + key + "_" + sp + "_" + prev + "/" + authUser.uid).remove().catch(function () {});
+          }
+        }
         saveJoined();
         updateCard(c, data[key] || v);
       });
@@ -1091,7 +1173,12 @@
       c.recent[dupKey] = Date.now();
       c.input.value = "";
       var payload = { text: text, ts: nowMs() };
-      if (myNick) payload.nick = myNick;
+      if (authUser && profile) {
+        payload.nick = profile.nick;
+        payload.uid = authUser.uid;
+      } else if (myNick) {
+        payload.nick = myNick;
+      }
       db.ref("chats/" + key).push(payload).catch(function () {
         c.input.value = text;
         toast("Nachricht konnte nicht gesendet werden.");
@@ -1113,7 +1200,18 @@
       div.className = "msg";
       div.appendChild(document.createTextNode(m.text));
       var small = document.createElement("small");
-      small.textContent = (nickOf(m) || "Anonym") + " · " + timeOf(m.ts);
+      var who = nickOf(m) || "Anonym";
+      var authorUid = (typeof m.uid === "string" && ID_RE.test(m.uid) && nickOf(m)) ? m.uid : "";
+      if (authorUid) {
+        var link = document.createElement("span");
+        link.className = "nick-link";
+        link.textContent = who;
+        link.addEventListener("click", function () { addFriendFromChat(authorUid, who); });
+        small.appendChild(link);
+        small.appendChild(document.createTextNode(" · " + timeOf(m.ts)));
+      } else {
+        small.textContent = who + " · " + timeOf(m.ts);
+      }
       div.appendChild(small);
       var rep = document.createElement("button");
       rep.type = "button";
@@ -2264,6 +2362,701 @@
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) refreshAll();
   });
+
+  /* ===== Konto & Freunde (freiwillig) ===== */
+  var auth = null;
+  var authEnabled = false;
+  var authUser = null;
+  var profile = null;
+  var profileLoaded = false;
+  var profileCreating = false;
+  var friendIds = {};
+  var friendNicks = {};
+  var requestsIn = {};
+  var sentTo = {};
+  var lastMsg = {};
+  var lastRefs = {};
+  var userRefs = [];
+  var seenTs = {};
+  var accBtn = document.getElementById("accBtn");
+  var accPanel = document.getElementById("accPanel");
+  var accTitle = document.getElementById("accTitle");
+  var accBody = document.getElementById("accBody");
+  var accBack = document.getElementById("accBack");
+  var accClose = document.getElementById("accClose");
+  var accOpen = false;
+  var accView = "auth";
+  var accTab = "friends";
+  var authMode = "login";
+  var accBusy = false;
+  var dmWith = null;
+  var dmRef = null;
+  var dmListEl = null;
+  var draft = { email: "", pw: "", nick: "", consent: false, code: "" };
+  var ID_RE = /^[A-Za-z0-9]{20,40}$/;
+  var CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
+
+  try { seenTs = JSON.parse(localStorage.getItem("bsh_dmseen") || "{}") || {}; } catch (e) { seenTs = {}; }
+  function saveSeen() { try { localStorage.setItem("bsh_dmseen", JSON.stringify(seenTs)); } catch (e) {} }
+
+  function mk(tag, cls, txt) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt !== undefined) e.textContent = txt;
+    return e;
+  }
+
+  function accButton(label, cls, onClick) {
+    var b = mk("button", "acc-btn2" + (cls ? " " + cls : ""), label);
+    b.type = "button";
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function miniButton(label, ghost, onClick) {
+    var b = mk("button", "acc-mini" + (ghost ? " ghost" : ""), label);
+    b.type = "button";
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function accField(label, type, value, onInput, attrs) {
+    var wrap = mk("label", "acc-field");
+    wrap.appendChild(mk("span", "acc-label", label));
+    var i = document.createElement("input");
+    i.type = type;
+    i.value = value || "";
+    i.className = "acc-input";
+    for (var k in (attrs || {})) {
+      if (attrs.hasOwnProperty(k)) i.setAttribute(k, attrs[k]);
+    }
+    i.addEventListener("input", function () { onInput(i.value); });
+    wrap.appendChild(i);
+    return wrap;
+  }
+
+  function myUid() { return authUser ? authUser.uid : ""; }
+  function chatIdFor(a, b) { return a < b ? a + "_" + b : b + "_" + a; }
+
+  function nickForUid(uid) {
+    if (friendNicks[uid]) return friendNicks[uid];
+    if (requestsIn[uid] && requestsIn[uid].nick) return requestsIn[uid].nick;
+    return "Spieler";
+  }
+
+  function isUnread(fid) {
+    var m = lastMsg[fid];
+    return !!(m && m.from !== myUid() && m.ts > (seenTs[fid] || 0));
+  }
+
+  function unreadCount() {
+    var n = 0;
+    for (var fid in friendIds) {
+      if (friendIds.hasOwnProperty(fid) && isUnread(fid)) n++;
+    }
+    return n;
+  }
+
+  function signedIn() { return !!(authUser && profile); }
+
+  function updateAccBtn() {
+    if (!authEnabled) { accBtn.style.display = "none"; return; }
+    accBtn.style.display = "";
+    if (signedIn()) {
+      var n = Object.keys(requestsIn).length + unreadCount();
+      accBtn.textContent = "👥 Freunde" + (n ? " · " + n : "");
+      accBtn.className = "acc-btn" + (n ? " alert" : "");
+    } else {
+      accBtn.textContent = authUser ? "👤 Profil anlegen" : "👤 Anmelden";
+      accBtn.className = "acc-btn";
+    }
+    nickBtn.style.display = signedIn() ? "none" : "";
+  }
+
+  function authErrorText(e) {
+    var c = e && e.code ? String(e.code) : "";
+    if (c === "auth/email-already-in-use") return "Diese E-Mail-Adresse ist schon registriert. Melde dich stattdessen an.";
+    if (c === "auth/invalid-email") return "Bitte gib eine gültige E-Mail-Adresse ein.";
+    if (c === "auth/weak-password") return "Das Passwort ist zu schwach. Nimm mindestens 8 Zeichen.";
+    if (c === "auth/user-not-found" || c === "auth/wrong-password" || c === "auth/invalid-credential" || c === "auth/invalid-login-credentials") return "E-Mail oder Passwort stimmt nicht.";
+    if (c === "auth/too-many-requests") return "Zu viele Versuche. Bitte warte kurz und versuche es später nochmal.";
+    if (c === "auth/network-request-failed") return "Keine Verbindung. Bitte prüfe dein Internet.";
+    if (c === "auth/operation-not-allowed") return "Die Anmeldung ist noch nicht freigeschaltet (Firebase: E-Mail/Passwort aktivieren).";
+    if (c === "auth/requires-recent-login") return "Bitte melde dich neu an und versuche es nochmal.";
+    if (c === "PERMISSION_DENIED" || (e && /permission/i.test(String(e.message || "")))) return "Das ist nicht erlaubt. Bitte versuche es nochmal.";
+    return "Das hat leider nicht geklappt. Bitte versuche es nochmal.";
+  }
+
+  function randomCode() {
+    var chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    var s = "";
+    for (var i = 0; i < 6; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+    return s;
+  }
+
+  function createProfile(nick, cb) {
+    var u = auth.currentUser;
+    if (!u) { cb(new Error("no user")); return; }
+    var tries = 0;
+    (function attempt() {
+      var code = randomCode();
+      db.ref("users/" + u.uid).set({ nick: nick, code: code }).then(function () {
+        return db.ref("codes/" + code).set(u.uid);
+      }).then(function () { cb(null); }).catch(function (e) {
+        tries++;
+        if (tries < 6) { attempt(); } else { cb(e); }
+      });
+    })();
+  }
+
+  function stopUserListeners() {
+    for (var i = 0; i < userRefs.length; i++) userRefs[i].off();
+    userRefs = [];
+    for (var fid in lastRefs) {
+      if (lastRefs.hasOwnProperty(fid)) lastRefs[fid].off();
+    }
+    lastRefs = {};
+    detachDm();
+  }
+
+  function detachDm() {
+    if (dmRef) { dmRef.off(); dmRef = null; }
+    dmListEl = null;
+  }
+
+  function ensureNick(fid) {
+    if (friendNicks[fid]) return;
+    db.ref("users/" + fid + "/nick").once("value").then(function (s) {
+      friendNicks[fid] = s.val() || "Spieler";
+      if (accOpen && accView !== "dm") renderAcc();
+    }).catch(function () {});
+  }
+
+  function watchLast(fid) {
+    if (lastRefs[fid] || !authUser) return;
+    var r = db.ref("dm/" + chatIdFor(authUser.uid, fid)).limitToLast(1);
+    lastRefs[fid] = r;
+    r.on("value", function (s) {
+      var v = null;
+      s.forEach(function (ch) { v = ch.val(); });
+      if (v && typeof v.text === "string") lastMsg[fid] = v;
+      updateAccBtn();
+      if (accOpen && accView === "home") renderAcc();
+    }, function () {});
+  }
+
+  function startUserListeners(uid) {
+    var pRef = db.ref("users/" + uid);
+    pRef.on("value", function (s) {
+      profile = s.val();
+      profileLoaded = true;
+      updateAccBtn();
+      renderAcc();
+    }, function () { profileLoaded = true; renderAcc(); });
+    var fRef = db.ref("friends/" + uid);
+    fRef.on("value", function (s) {
+      friendIds = s.val() || {};
+      Object.keys(friendIds).forEach(function (fid) { ensureNick(fid); watchLast(fid); });
+      Object.keys(lastRefs).forEach(function (fid) {
+        if (!friendIds[fid]) { lastRefs[fid].off(); delete lastRefs[fid]; delete lastMsg[fid]; }
+      });
+      updateAccBtn();
+      if (accOpen && accView !== "dm") renderAcc();
+    }, function () {});
+    var rRef = db.ref("requests/" + uid);
+    rRef.on("value", function (s) {
+      requestsIn = s.val() || {};
+      updateAccBtn();
+      if (accOpen && accView !== "dm") renderAcc();
+    }, function () {});
+    userRefs = [pRef, fRef, rRef];
+  }
+
+  function onAuthUser(user) {
+    stopUserListeners();
+    authUser = user;
+    profile = null;
+    profileLoaded = false;
+    friendIds = {};
+    friendNicks = {};
+    requestsIn = {};
+    sentTo = {};
+    lastMsg = {};
+    dmWith = null;
+    if (user) startUserListeners(user.uid);
+    updateAccBtn();
+    renderAcc();
+  }
+
+  function openAcc() {
+    accOpen = true;
+    accPanel.style.display = "";
+    document.body.style.overflow = "hidden";
+    if (authUser) accView = "home";
+    renderAcc();
+  }
+
+  function closeAcc() {
+    accOpen = false;
+    accPanel.style.display = "none";
+    document.body.style.overflow = "";
+    detachDm();
+    dmWith = null;
+    if (accView === "dm") accView = "home";
+  }
+
+  function renderAcc() {
+    if (!accOpen) return;
+    accBody.innerHTML = "";
+    if (!authUser) accView = "auth";
+    else if (profileCreating || !profileLoaded) accView = "wait";
+    else if (!profile) accView = "setup";
+    else if (accView === "auth" || accView === "setup" || accView === "wait") accView = "home";
+    if (accView !== "dm") { detachDm(); dmWith = null; }
+    accBack.style.visibility = accView === "dm" ? "visible" : "hidden";
+    if (accView === "auth") renderAuth();
+    else if (accView === "wait") { accTitle.textContent = "Konto"; accBody.appendChild(mk("div", "acc-card", "Einen Moment ...")); }
+    else if (accView === "setup") renderSetup();
+    else if (accView === "dm") renderDm();
+    else renderHome();
+  }
+
+  function renderAuth() {
+    accTitle.textContent = authMode === "signup" ? "Konto erstellen" : "Anmelden";
+    var box = mk("div", "acc-card");
+    box.appendChild(mk("p", "acc-note", "Ein Konto ist freiwillig. Ohne Konto kannst du alles andere in der App weiter nutzen. Mit Konto kannst du Freunde hinzufügen und privat mit ihnen chatten."));
+    if (authMode === "signup") {
+      box.appendChild(accField("Spitzname (2 bis 20 Zeichen)", "text", draft.nick, function (v) { draft.nick = v; }, { maxlength: "20", autocomplete: "nickname" }));
+    }
+    box.appendChild(accField("E-Mail-Adresse", "email", draft.email, function (v) { draft.email = v; }, { autocomplete: "email", autocapitalize: "none", inputmode: "email" }));
+    box.appendChild(accField(authMode === "signup" ? "Passwort (mindestens 8 Zeichen)" : "Passwort", "password", draft.pw, function (v) { draft.pw = v; }, { autocomplete: authMode === "signup" ? "new-password" : "current-password" }));
+    if (authMode === "signup") {
+      var chk = mk("label", "acc-check");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!draft.consent;
+      cb.addEventListener("change", function () { draft.consent = cb.checked; });
+      chk.appendChild(cb);
+      chk.appendChild(mk("span", "", "Ich bin einverstanden, dass meine E-Mail-Adresse und mein Spitzname für das Konto bei Google Firebase gespeichert werden. Ich kann mein Konto jederzeit selbst löschen."));
+      box.appendChild(chk);
+    }
+    var main = accButton(authMode === "signup" ? "Konto erstellen" : "Anmelden", "", authMode === "signup" ? doSignUp : doLogin);
+    main.disabled = accBusy;
+    box.appendChild(main);
+    box.appendChild(accButton(authMode === "signup" ? "Ich habe schon ein Konto" : "Neu hier? Konto erstellen", "ghost", function () {
+      authMode = authMode === "signup" ? "login" : "signup";
+      renderAcc();
+    }));
+    if (authMode === "login") box.appendChild(accButton("Passwort vergessen?", "ghost", doReset));
+    accBody.appendChild(box);
+  }
+
+  function doSignUp() {
+    var nick = draft.nick.trim().replace(/\s+/g, " ");
+    var np = nickProblem(nick);
+    if (np) { toast(np); return; }
+    if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) { toast("Bitte gib eine gültige E-Mail-Adresse ein."); return; }
+    if ((draft.pw || "").length < 8) { toast("Das Passwort braucht mindestens 8 Zeichen."); return; }
+    if (!draft.consent) { toast("Bitte stimme der Speicherung deiner Daten zu."); return; }
+    accBusy = true;
+    profileCreating = true;
+    renderAcc();
+    auth.createUserWithEmailAndPassword(draft.email.trim(), draft.pw).then(function () {
+      return new Promise(function (res, rej) {
+        createProfile(nick, function (e) { if (e) { rej(e); } else { res(); } });
+      });
+    }).then(function () {
+      accBusy = false;
+      profileCreating = false;
+      draft.pw = "";
+      accView = "home";
+      accTab = "profile";
+      toast("Konto erstellt. Willkommen, " + nick + "!");
+      renderAcc();
+    }).catch(function (e) {
+      accBusy = false;
+      profileCreating = false;
+      renderAcc();
+      toast(authErrorText(e));
+    });
+  }
+
+  function doLogin() {
+    if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) { toast("Bitte gib deine E-Mail-Adresse ein."); return; }
+    if (!draft.pw) { toast("Bitte gib dein Passwort ein."); return; }
+    accBusy = true;
+    renderAcc();
+    auth.signInWithEmailAndPassword(draft.email.trim(), draft.pw).then(function () {
+      accBusy = false;
+      draft.pw = "";
+      accView = "home";
+      accTab = "friends";
+      renderAcc();
+    }).catch(function (e) {
+      accBusy = false;
+      renderAcc();
+      toast(authErrorText(e));
+    });
+  }
+
+  function doReset() {
+    if (!/^\S+@\S+\.\S+$/.test(draft.email.trim())) { toast("Bitte gib zuerst deine E-Mail-Adresse ein."); return; }
+    auth.sendPasswordResetEmail(draft.email.trim()).then(function () {
+      toast("Wir haben dir eine E-Mail zum Zurücksetzen geschickt (auch im Spam-Ordner nachsehen).");
+    }).catch(function (e) { toast(authErrorText(e)); });
+  }
+
+  function renderSetup() {
+    accTitle.textContent = "Profil anlegen";
+    var box = mk("div", "acc-card");
+    box.appendChild(mk("p", "acc-note", "Du bist angemeldet, aber dein Profil fehlt noch. Wähle einen Spitznamen, den deine Freunde sehen."));
+    box.appendChild(accField("Spitzname (2 bis 20 Zeichen)", "text", draft.nick, function (v) { draft.nick = v; }, { maxlength: "20" }));
+    box.appendChild(accButton("Profil speichern", "", function () {
+      var nick = draft.nick.trim().replace(/\s+/g, " ");
+      var np = nickProblem(nick);
+      if (np) { toast(np); return; }
+      profileCreating = true;
+      renderAcc();
+      createProfile(nick, function (e) {
+        profileCreating = false;
+        if (e) toast(authErrorText(e));
+        renderAcc();
+      });
+    }));
+    box.appendChild(accButton("Abmelden", "ghost", function () { auth.signOut(); }));
+    accBody.appendChild(box);
+  }
+
+  function sendRequest(toUid, toNick) {
+    var me = myUid();
+    if (!signedIn()) { toast("Melde dich an, um Freunde hinzuzufügen."); openAcc(); return; }
+    if (!ID_RE.test(toUid)) return;
+    if (toUid === me) { toast("Das bist du selbst."); return; }
+    if (friendIds[toUid]) { toast("Ihr seid schon befreundet."); return; }
+    if (requestsIn[toUid]) { acceptRequest(toUid); return; }
+    db.ref("requests/" + toUid + "/" + me).set({ nick: profile.nick, ts: nowMs() }).then(function () {
+      sentTo[toUid] = true;
+      toast("Anfrage an " + (toNick || "den Spieler") + " gesendet.");
+      if (accOpen && accView !== "dm") renderAcc();
+    }).catch(function () {
+      toast("Die Anfrage konnte nicht gesendet werden. Vielleicht hast du schon eine geschickt.");
+    });
+  }
+
+  function addFriendFromChat(uid, nick) {
+    if (!authEnabled) return;
+    if (!signedIn()) { toast("Melde dich an, um Freunde hinzuzufügen."); openAcc(); return; }
+    if (uid === myUid()) return;
+    if (friendIds[uid]) { toast("Ihr seid schon befreundet."); return; }
+    if (!window.confirm(nick + " eine Freundschaftsanfrage senden?")) return;
+    sendRequest(uid, nick);
+  }
+
+  function addByCode(raw) {
+    var code = String(raw || "").trim().toUpperCase();
+    if (!CODE_RE.test(code)) { toast("Der Freundes-Code besteht aus 6 Zeichen (Buchstaben und Zahlen)."); return; }
+    db.ref("codes/" + code).once("value").then(function (s) {
+      var uid = s.val();
+      if (typeof uid !== "string" || !ID_RE.test(uid)) { toast("Diesen Code gibt es nicht."); return; }
+      draft.code = "";
+      sendRequest(uid, "");
+    }).catch(function () { toast("Der Code konnte nicht geprüft werden."); });
+  }
+
+  function acceptRequest(fromUid) {
+    var me = myUid();
+    var ts = nowMs();
+    db.ref("friends/" + me + "/" + fromUid).set({ ts: ts }).then(function () {
+      return db.ref("friends/" + fromUid + "/" + me).set({ ts: ts });
+    }).then(function () {
+      return db.ref("requests/" + me + "/" + fromUid).remove();
+    }).then(function () {
+      toast("Ihr seid jetzt befreundet. 🎉");
+    }).catch(function () { toast("Das hat leider nicht geklappt."); });
+  }
+
+  function declineRequest(fromUid) {
+    db.ref("requests/" + myUid() + "/" + fromUid).remove().catch(function () {});
+  }
+
+  function removeFriend(fid) {
+    if (!window.confirm(nickForUid(fid) + " aus deiner Freundesliste entfernen?")) return;
+    var me = myUid();
+    db.ref("friends/" + me + "/" + fid).remove().then(function () {
+      return db.ref("friends/" + fid + "/" + me).remove();
+    }).catch(function () {});
+  }
+
+  function renderHome() {
+    accTitle.textContent = "Freunde";
+    var tabs = mk("div", "acc-tabs");
+    var rc = Object.keys(requestsIn).length;
+    [["friends", "Freunde"], ["requests", "Anfragen" + (rc ? " (" + rc + ")" : "")], ["together", "Mitspieler"], ["profile", "Profil"]].forEach(function (t) {
+      var b = mk("button", "acc-tab" + (accTab === t[0] ? " on" : ""), t[1]);
+      b.type = "button";
+      b.addEventListener("click", function () { accTab = t[0]; renderAcc(); });
+      tabs.appendChild(b);
+    });
+    accBody.appendChild(tabs);
+    if (accTab === "requests") renderRequests();
+    else if (accTab === "together") renderTogether();
+    else if (accTab === "profile") renderProfile();
+    else renderFriends();
+  }
+
+  function renderFriends() {
+    var add = mk("div", "acc-card");
+    add.appendChild(mk("h3", "", "Freund hinzufügen"));
+    add.appendChild(mk("p", "acc-note", "Gib den Freundes-Code deines Freundes ein. Du findest ihn bei ihm unter „Profil“. Du kannst auch im Chat auf den Namen eines angemeldeten Spielers tippen."));
+    var codeField = accField("Freundes-Code", "text", draft.code, function (v) { draft.code = v.toUpperCase(); }, { maxlength: "6", autocapitalize: "characters", autocomplete: "off" });
+    add.appendChild(codeField);
+    add.appendChild(accButton("Anfrage senden", "", function () { addByCode(draft.code); }));
+    accBody.appendChild(add);
+    var list = mk("div", "acc-card");
+    var ids = Object.keys(friendIds);
+    list.appendChild(mk("h3", "", "Meine Freunde (" + ids.length + ")"));
+    if (!ids.length) list.appendChild(mk("p", "acc-note", "Noch keine Freunde. Füge Freunde per Code hinzu oder tippe im Chat auf einen Namen."));
+    ids.sort(function (a, b) {
+      var ta = lastMsg[a] ? lastMsg[a].ts : 0;
+      var tb = lastMsg[b] ? lastMsg[b].ts : 0;
+      return tb - ta;
+    });
+    ids.forEach(function (fid) {
+      var row = mk("div", "acc-row");
+      var main = mk("div", "acc-main");
+      var name = mk("div", "acc-name");
+      if (isUnread(fid)) name.appendChild(mk("span", "acc-dot"));
+      name.appendChild(document.createTextNode(nickForUid(fid)));
+      main.appendChild(name);
+      var m = lastMsg[fid];
+      main.appendChild(mk("div", "acc-sub", m ? (m.from === myUid() ? "Du: " : "") + m.text : "Noch keine Nachricht"));
+      row.appendChild(main);
+      row.appendChild(miniButton("💬 Chat", false, function () { openDm(fid); }));
+      row.appendChild(miniButton("✕", true, function () { removeFriend(fid); }));
+      list.appendChild(row);
+    });
+    accBody.appendChild(list);
+  }
+
+  function renderRequests() {
+    var card = mk("div", "acc-card");
+    var ids = Object.keys(requestsIn);
+    card.appendChild(mk("h3", "", "Anfragen (" + ids.length + ")"));
+    if (!ids.length) card.appendChild(mk("p", "acc-note", "Keine offenen Anfragen."));
+    ids.forEach(function (fid) {
+      var r = requestsIn[fid] || {};
+      var nm = typeof r.nick === "string" && nickProblem(r.nick) === "" ? r.nick : "Spieler";
+      var row = mk("div", "acc-row");
+      var main = mk("div", "acc-main");
+      main.appendChild(mk("div", "acc-name", nm));
+      main.appendChild(mk("div", "acc-sub", "möchte dein Freund sein"));
+      row.appendChild(main);
+      row.appendChild(miniButton("Annehmen", false, function () { acceptRequest(fid); }));
+      row.appendChild(miniButton("✕", true, function () { declineRequest(fid); }));
+      card.appendChild(row);
+    });
+    accBody.appendChild(card);
+  }
+
+  function loadTogether(cb) {
+    var me = myUid();
+    db.ref("history/" + me).orderByKey().limitToLast(12).once("value").then(function (s) {
+      var entries = [];
+      s.forEach(function (ch) {
+        var v = ch.val();
+        if (v && typeof v.key === "string") entries.push(v);
+      });
+      entries.reverse();
+      var pending = entries.length;
+      var found = {};
+      if (!pending) { cb([]); return; }
+      entries.forEach(function (en) {
+        db.ref("played/" + en.key).once("value").then(function (ps) {
+          var m = ps.val() || {};
+          Object.keys(m).forEach(function (uid) {
+            if (uid !== me && ID_RE.test(uid) && typeof m[uid] === "string" && nickProblem(m[uid]) === "" && !found[uid]) {
+              found[uid] = { uid: uid, nick: m[uid], entry: en };
+            }
+          });
+        }).catch(function () {}).then(function () {
+          pending--;
+          if (pending === 0) cb(Object.keys(found).map(function (k) { return found[k]; }));
+        });
+      });
+    }).catch(function () { cb([]); });
+  }
+
+  function renderTogether() {
+    var card = mk("div", "acc-card");
+    card.appendChild(mk("h3", "", "Mit diesen Leuten hast du gespielt"));
+    card.appendChild(mk("p", "acc-note", "Hier erscheinen angemeldete Spieler, die sich bei denselben Spielen eingetragen haben wie du."));
+    var body = mk("div", "");
+    body.appendChild(mk("p", "acc-note", "Lade ..."));
+    card.appendChild(body);
+    accBody.appendChild(card);
+    loadTogether(function (list) {
+      if (!accOpen || accTab !== "together" || accView !== "home") return;
+      body.innerHTML = "";
+      if (!list.length) { body.appendChild(mk("p", "acc-note", "Noch niemand. Melde dich bei einem Spiel an, während du eingeloggt bist.")); return; }
+      list.forEach(function (it) {
+        var sp = sportById(it.entry.sport);
+        var row = mk("div", "acc-row");
+        var main = mk("div", "acc-main");
+        main.appendChild(mk("div", "acc-name", it.nick));
+        main.appendChild(mk("div", "acc-sub", (sp ? sp.icon + " " : "") + String(it.entry.place || "") + " · " + (typeof it.entry.date === "string" ? dateLabel(it.entry.date) : "") + ", " + String(it.entry.time || "")));
+        row.appendChild(main);
+        if (friendIds[it.uid]) {
+          row.appendChild(mk("div", "acc-sub", "Freund ✓"));
+        } else if (sentTo[it.uid]) {
+          row.appendChild(mk("div", "acc-sub", "Anfrage gesendet"));
+        } else {
+          row.appendChild(miniButton("➕ Anfrage", false, function () { sendRequest(it.uid, it.nick); }));
+        }
+        body.appendChild(row);
+      });
+    });
+  }
+
+  function renderProfile() {
+    var card = mk("div", "acc-card");
+    card.appendChild(mk("h3", "", "Dein Profil"));
+    card.appendChild(mk("div", "acc-name", profile.nick));
+    card.appendChild(mk("p", "acc-note", authUser.email || ""));
+    card.appendChild(accButton("Spitzname ändern", "ghost", function () {
+      var input = window.prompt("Neuer Spitzname (2 bis 20 Zeichen):", profile.nick);
+      if (input === null) return;
+      input = input.trim().replace(/\s+/g, " ");
+      var np = nickProblem(input);
+      if (np) { toast(np); return; }
+      db.ref("users/" + myUid() + "/nick").set(input).then(function () { toast("Spitzname gespeichert."); }).catch(function () { toast("Das hat leider nicht geklappt."); });
+    }));
+    accBody.appendChild(card);
+    var codeCard = mk("div", "acc-card");
+    codeCard.appendChild(mk("h3", "", "Dein Freundes-Code"));
+    codeCard.appendChild(mk("p", "acc-note", "Schick diesen Code deinen Freunden. Sie geben ihn bei „Freund hinzufügen“ ein."));
+    codeCard.appendChild(mk("div", "acc-code", profile.code));
+    codeCard.appendChild(accButton("📋 Code teilen", "", function () {
+      var text = "Füge mich bei Berlin Sports Hub als Freund hinzu! Mein Code: " + profile.code + "  " + window.location.href.split("#")[0].split("?")[0];
+      if (navigator.share) {
+        navigator.share({ text: text }).catch(function () {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { toast("Text kopiert."); }).catch(function () { toast("Dein Code: " + profile.code); });
+      } else {
+        toast("Dein Code: " + profile.code);
+      }
+    }));
+    accBody.appendChild(codeCard);
+    var more = mk("div", "acc-card");
+    more.appendChild(accButton("Abmelden", "ghost", function () { auth.signOut(); toast("Du bist abgemeldet."); }));
+    more.appendChild(accButton("Konto löschen", "danger", deleteAccount));
+    more.appendChild(mk("p", "acc-note", "Beim Löschen werden dein Profil, dein Freundes-Code, deine Freundschaften und dein Verlauf entfernt. Das kann nicht rückgängig gemacht werden."));
+    accBody.appendChild(more);
+  }
+
+  function deleteAccount() {
+    if (!window.confirm("Konto wirklich löschen? Das kann nicht rückgängig gemacht werden.")) return;
+    var me = myUid();
+    var code = profile ? profile.code : "";
+    var ids = Object.keys(friendIds);
+    var ops = [];
+    ids.forEach(function (fid) {
+      ops.push(db.ref("friends/" + fid + "/" + me).remove());
+      ops.push(db.ref("friends/" + me + "/" + fid).remove());
+    });
+    Object.keys(requestsIn).forEach(function (fid) { ops.push(db.ref("requests/" + me + "/" + fid).remove()); });
+    ops.push(db.ref("history/" + me).remove());
+    Promise.all(ops).then(function () {
+      return code ? db.ref("codes/" + code).remove() : null;
+    }).then(function () {
+      return db.ref("users/" + me).remove();
+    }).then(function () {
+      return auth.currentUser.delete();
+    }).then(function () {
+      toast("Dein Konto wurde gelöscht.");
+      closeAcc();
+    }).catch(function (e) { toast(authErrorText(e)); });
+  }
+
+  function openDm(fid) {
+    accView = "dm";
+    dmWith = fid;
+    renderAcc();
+  }
+
+  function renderDm() {
+    var fid = dmWith;
+    var me = myUid();
+    accTitle.textContent = nickForUid(fid);
+    var list = mk("div", "dm-list");
+    dmListEl = list;
+    list.appendChild(mk("div", "dm-empty", "Noch keine Nachrichten. Schreib die erste!"));
+    accBody.appendChild(list);
+    var row = mk("div", "chatrow");
+    var input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 300;
+    input.placeholder = "Nachricht schreiben...";
+    input.className = "acc-input";
+    var send = document.createElement("button");
+    send.type = "button";
+    send.className = "acc-mini";
+    send.textContent = "Senden";
+    var lastDm = 0;
+    function sendDm() {
+      var text = input.value.trim();
+      if (!text) return;
+      var problem = chatProblem(text);
+      if (problem) { input.value = ""; toast(problem); return; }
+      if (Date.now() - lastDm < 2000) { toast("Bitte kurz warten."); return; }
+      lastDm = Date.now();
+      input.value = "";
+      db.ref("dm/" + chatIdFor(me, fid)).push({ from: me, text: text, ts: nowMs() }).catch(function () {
+        input.value = text;
+        toast("Die Nachricht konnte nicht gesendet werden. Seid ihr noch befreundet?");
+      });
+    }
+    send.addEventListener("click", sendDm);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); sendDm(); }
+    });
+    row.appendChild(input);
+    row.appendChild(send);
+    accBody.appendChild(row);
+    detachDmOnly();
+    dmRef = db.ref("dm/" + chatIdFor(me, fid)).limitToLast(60);
+    var first = true;
+    dmRef.on("child_added", function (snap) {
+      var m = snap.val();
+      if (!m || typeof m.text !== "string" || chatProblem(m.text)) return;
+      if (first) { list.innerHTML = ""; first = false; }
+      var b = mk("div", "dm-msg" + (m.from === me ? " mine" : ""), m.text);
+      b.appendChild(mk("small", "", timeOf(m.ts)));
+      list.appendChild(b);
+      list.scrollTop = list.scrollHeight;
+      if (m.ts > (seenTs[fid] || 0)) { seenTs[fid] = m.ts; saveSeen(); }
+      updateAccBtn();
+    }, function () {
+      toast("Kein Zugriff auf diesen Chat. Seid ihr noch befreundet?");
+    });
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 50);
+  }
+
+  function detachDmOnly() {
+    if (dmRef) { dmRef.off(); dmRef = null; }
+  }
+
+  accBack.addEventListener("click", function () { detachDm(); dmWith = null; accView = "home"; accTab = "friends"; renderAcc(); });
+  accClose.addEventListener("click", closeAcc);
+  accBtn.addEventListener("click", openAcc);
+
+  if (FIREBASE_WEB_CONFIG.apiKey && typeof firebase.auth === "function") {
+    try {
+      auth = firebase.auth();
+      authEnabled = true;
+      auth.onAuthStateChanged(onAuthUser);
+    } catch (e) { authEnabled = false; }
+  }
+  updateAccBtn();
 
   searchEl.addEventListener("input", function () {
     if (selected && normName(searchEl.value) !== normName(selected.name)) selected = null;
