@@ -823,10 +823,11 @@
   }
 
   function pickDefaultSport(v) {
+    var avail = sportsOfPlace(v);
     for (var i = 0; i < SPORTS.length; i++) {
-      if (isActive(sess(v, SPORTS[i].id))) return SPORTS[i].id;
+      if (avail.indexOf(SPORTS[i].id) !== -1 && isActive(sess(v, SPORTS[i].id))) return SPORTS[i].id;
     }
-    return "fussball";
+    return avail.indexOf("fussball") !== -1 ? "fussball" : (avail[0] || "fussball");
   }
 
   function defaultDraftDate() {
@@ -1153,11 +1154,14 @@
 
   function updateCard(c, v) {
     if (!c.sport) c.sport = pickDefaultSport(v);
+    var avail = sportsOfPlace(v);
+    if (avail.indexOf(c.sport) === -1 && avail.length) c.sport = avail[0];
     c.title.textContent = "📍 " + v.name;
 
     for (var i = 0; i < c.sportBtns.length; i++) {
       var id = c.sportBtns[i].getAttribute("data-sport");
       var si = sess(v, id);
+      c.sportBtns[i].style.display = avail.indexOf(id) !== -1 ? "" : "none";
       c.sportBtns[i].className = "sport" + (id === c.sport ? " active" : "");
       c.sportBtns[i].querySelector(".cnt").textContent = isActive(si) ? "👥 " + si.players : "";
     }
@@ -1372,9 +1376,96 @@
   var BERLIN = { minLat: 52.338, maxLat: 52.675, minLon: 13.088, maxLon: 13.761 };
   var LEISURE_KINDS = {
     park: "Park", pitch: "Sport-/Bolzplatz", sports_centre: "Sportanlage", stadium: "Stadion",
-    playground: "Spielplatz", garden: "Garten", nature_reserve: "Naturschutzgebiet", track: "Laufbahn",
-    common: "Grünfläche", dog_park: "Hundepark", beach_resort: "Strandbad"
+    common: "Grünfläche", beach_resort: "Strandbad"
   };
+  var UNPLAYABLE_RE = /(tennis|skat|hockey|golf|reit|rugby|baseball|bmx|boule|petanque|bowling|schwimm|freibad|hundeauslauf|spielplatz|friedhof|klettern|boxen|turnhalle)/;
+  var ALL_SPORT_IDS = ["basketball", "fussball", "volleyball"];
+
+  function defaultSports(kind, name) {
+    var n = normName(name || "");
+    var out = [];
+    function add(id) { if (out.indexOf(id) === -1) out.push(id); }
+    if (/(basketball|streetball|korbball)/.test(n)) add("basketball");
+    if (/(volleyball|beachvolley|beach volley)/.test(n)) add("volleyball");
+    if (/(fussball|soccer|kunstrasen|rasenplatz|kicker)/.test(n)) add("fussball");
+    if (/(bolz|kafig|kaefig|streetsoccer)/.test(n)) { add("fussball"); add("basketball"); }
+    if (out.length) return SPORTS.map(function (x) { return x.id; }).filter(function (id) { return out.indexOf(id) !== -1; });
+    if (kind === "Sport-/Bolzplatz") return ["basketball", "fussball"];
+    if (kind === "Park" || kind === "Grünfläche") return ["fussball", "volleyball"];
+    if (kind === "Stadion") return ["fussball"];
+    if (kind === "Strandbad") return ["volleyball"];
+    return ALL_SPORT_IDS.slice();
+  }
+
+  function sportsOfPlace(v) {
+    var list = [];
+    var raw = v && v.sports;
+    if (raw && typeof raw === "object") {
+      var vals = Array.isArray(raw) ? raw : Object.keys(raw).map(function (k) { return raw[k]; });
+      for (var i = 0; i < vals.length; i++) {
+        if (ALL_SPORT_IDS.indexOf(vals[i]) !== -1 && list.indexOf(vals[i]) === -1) list.push(vals[i]);
+      }
+    }
+    if (list.length === 0) list = defaultSports(v ? v.kind : "", v ? v.name : "");
+    for (var j = 0; j < SPORTS.length; j++) {
+      var s = v && v.sessions && v.sessions[SPORTS[j].id];
+      if (s && typeof s === "object" && s.players > 0 && list.indexOf(SPORTS[j].id) === -1) list.push(SPORTS[j].id);
+    }
+    return SPORTS.map(function (x) { return x.id; }).filter(function (id) { return list.indexOf(id) !== -1; });
+  }
+
+  function sportEmojis(list) {
+    return list.map(function (id) { var sp = sportById(id); return sp ? sp.icon : ""; }).join(" ");
+  }
+
+  function sportsFromTags(tags) {
+    if (!tags || typeof tags.sport !== "string") return null;
+    var parts = tags.sport.toLowerCase().split(/[;,]/);
+    var list = [];
+    var multi = false;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i].trim();
+      var id = "";
+      if (p === "multi") {
+        multi = true;
+      } else if (p === "soccer" || p === "football" || p === "futsal" || p === "five_a_side") {
+        id = "fussball";
+      } else if (p === "basketball" || p === "streetball") {
+        id = "basketball";
+      } else if (p === "volleyball" || p === "beachvolleyball" || p === "beach_volleyball") {
+        id = "volleyball";
+      }
+      if (id && list.indexOf(id) === -1) list.push(id);
+    }
+    if (multi) return ALL_SPORT_IDS.slice();
+    return list;
+  }
+
+  function fetchOsmSports(sel, done) {
+    if (typeof fetch !== "function") { done(null); return; }
+    var t = sel.osm.charAt(0);
+    var word = t === "n" ? "node" : (t === "w" ? "way" : "relation");
+    var q = "[out:json][timeout:10];" + word + "(" + sel.osm.slice(1) + ");out tags;";
+    var finished = false;
+    var timer = setTimeout(function () {
+      if (!finished) { finished = true; done(null); }
+    }, 9000);
+    fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function (r) {
+      if (!r.ok) throw new Error("http");
+      return r.json();
+    }).then(function (j) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      var tags = j && j.elements && j.elements[0] && j.elements[0].tags;
+      done(sportsFromTags(tags));
+    }).catch(function () {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      done(null);
+    });
+  }
 
   function normName(s) {
     var t = foldDiacritics(String(s).toLowerCase().replace(/ß/g, "ss"));
@@ -1688,6 +1779,7 @@
       if (lat < BERLIN.minLat || lat > BERLIN.maxLat || lon < BERLIN.minLon || lon > BERLIN.maxLon) continue;
       var name = typeof p.name === "string" ? p.name.trim() : "";
       if (!name || name.length > 60) continue;
+      if (UNPLAYABLE_RE.test(normName(name))) continue;
       if (p.osm_key !== "leisure" || !LEISURE_KINDS.hasOwnProperty(p.osm_value)) continue;
       if (p.state && p.state !== "Berlin") continue;
       var type = String(p.osm_type || "").toLowerCase();
@@ -1706,7 +1798,8 @@
         lat: Math.round(lat * 100000) / 100000,
         lon: Math.round(lon * 100000) / 100000,
         area: String(p.district || p.locality || p.suburb || p.city || "").slice(0, 80),
-        kind: LEISURE_KINDS[p.osm_value]
+        kind: LEISURE_KINDS[p.osm_value],
+        sports: defaultSports(LEISURE_KINDS[p.osm_value], name)
       });
     }
     return out;
@@ -1803,7 +1896,7 @@
           nm.textContent = "📍 " + s.name;
           var sub = document.createElement("span");
           sub.className = "sug-sub";
-          sub.textContent = s.kind + (s.area ? " · " + s.area : "") +
+          sub.textContent = s.kind + (s.area ? " · " + s.area : "") + " · " + sportEmojis(s.sports || []) +
             (userPos ? " · " + fmtDist(distKm(userPos.lat, userPos.lon, s.lat, s.lon)) : "");
           main.appendChild(nm);
           main.appendChild(sub);
@@ -1883,15 +1976,38 @@
       toast("Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
       return;
     }
+    var btn = createArea.querySelector(".create-btn");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Prüfe Platz ...";
+    }
+    fetchOsmSports(sel, function (tagSports) {
+      if (tagSports && tagSports.length === 0) {
+        toast("Dieser Ort ist laut Kartendaten für andere Sportarten gedacht, nicht für Fußball, Basketball oder Volleyball.");
+        renderCreate();
+        return;
+      }
+      var list = tagSports && tagSports.length ? tagSports : (sel.sports && sel.sports.length ? sel.sports : defaultSports(sel.kind, sel.name));
+      doCreatePlace(sel, list, true);
+    });
+  }
+
+  function doCreatePlace(sel, sportsList, withSports) {
     var rec = { name: sel.name, createdAt: nowMs(), osm: sel.osm, lat: sel.lat, lon: sel.lon };
     if (sel.area) rec.area = sel.area;
     if (sel.kind) rec.kind = sel.kind;
+    if (withSports && sportsList && sportsList.length) rec.sports = sportsList;
     placesRef.child(sel.key).transaction(function (cur) {
       if (cur === null) return rec;
       return;
     }, function (err, committed) {
       if (err) {
+        if (withSports) {
+          doCreatePlace(sel, sportsList, false);
+          return;
+        }
         toast("Platz konnte nicht erstellt werden. Prüfe deine Internetverbindung.");
+        renderCreate();
         return;
       }
       toast(committed ? "Platz aktiviert! Jetzt für alle sichtbar. ✅" : "Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
