@@ -864,14 +864,14 @@
       var rows = [];
       snap.forEach(function (ch) { rows.unshift([ch.key, ch.val() || {}]); });
       card.textContent = "";
-      var cols = [["visits", "Besucher"], ["newUsers", "Neu"], ["returning", "Wieder da"], ["joins", "Anmeldungen zum Spiel"], ["places", "Neue Plätze"], ["accounts", "Neue Konten"]];
+      var cols = [["visits", "Gäste"], ["newUsers", "Neu"], ["returning", "Zurück"], ["joins", "Dabei"], ["places", "Plätze"], ["accounts", "Konten"]];
       var tbl = document.createElement("table");
-      tbl.style.cssText = "width:100%;border-collapse:collapse;font-size:13px;color:#fff";
+      tbl.style.cssText = "width:100%;border-collapse:collapse;font-size:12px;color:#fff;table-layout:fixed";
       var tr = document.createElement("tr");
       [["", "Tag"]].concat(cols).forEach(function (c) {
         var th = document.createElement("th");
         th.textContent = c[1];
-        th.style.cssText = "text-align:left;padding:4px 6px;border-bottom:1px solid #3a3f46;color:#9aa0a8";
+        th.style.cssText = "text-align:left;padding:4px 3px;border-bottom:1px solid #3a3f46;color:#9aa0a8";
         tr.appendChild(th);
       });
       tbl.appendChild(tr);
@@ -880,14 +880,14 @@
         var row = document.createElement("tr");
         var td = document.createElement("td");
         td.textContent = r[0].slice(5);
-        td.style.cssText = "padding:4px 6px";
+        td.style.cssText = "padding:4px 3px";
         row.appendChild(td);
         cols.forEach(function (c) {
           var v = typeof r[1][c[0]] === "number" ? r[1][c[0]] : 0;
           sum[c[0]] = (sum[c[0]] || 0) + v;
           var d = document.createElement("td");
           d.textContent = String(v);
-          d.style.cssText = "padding:4px 6px";
+          d.style.cssText = "padding:4px 3px";
           row.appendChild(d);
         });
         tbl.appendChild(row);
@@ -907,7 +907,7 @@
       card.appendChild(tbl);
       var note = document.createElement("p");
       note.className = "acc-note";
-      note.textContent = "Besucher = Geräte pro Tag. Zähler sind anonym und ungefähr.";
+      note.textContent = "Gäste = Geräte pro Tag. Neu = erster Besuch. Zurück = war schon an einem anderen Tag da. Dabei = Anmeldungen zum Spiel. Plätze = neue Plätze. Konten = neue Konten. Zähler sind anonym und ungefähr.";
       card.appendChild(note);
     }).catch(function () { card.textContent = "Keine Berechtigung oder Fehler."; });
   }
