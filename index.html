@@ -888,6 +888,12 @@
   }
 
   function countVisit() {
+    var ua = String(navigator.userAgent || "");
+    if (navigator.webdriver || /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|headless|lighthouse|pingdom|monitor/i.test(ua)) return;
+    try {
+      if (/[?&]stats(=|&|$)/.test(window.location.search)) localStorage.setItem("bsh_owner", "1");
+      if (localStorage.getItem("bsh_owner") === "1") return;
+    } catch (e) {}
     var today = todayStr();
     var last = "", first = "";
     try { last = localStorage.getItem("bsh_lastvisit") || ""; first = localStorage.getItem("bsh_firstvisit") || ""; } catch (e) {}
