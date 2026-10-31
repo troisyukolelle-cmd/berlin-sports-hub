@@ -1738,30 +1738,40 @@
     return list;
   }
 
-  function fetchOsmSports(sel, done) {
+  var osmSportsCache = {};
+
+  function fetchOsmSports(sel, done, maxWait) {
     if (typeof fetch !== "function") { done(null); return; }
-    var t = sel.osm.charAt(0);
-    var word = t === "n" ? "node" : (t === "w" ? "way" : "relation");
-    var q = "[out:json][timeout:10];" + word + "(" + sel.osm.slice(1) + ");out tags;";
-    var finished = false;
-    var timer = setTimeout(function () {
-      if (!finished) { finished = true; done(null); }
-    }, 9000);
-    fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function (r) {
-      if (!r.ok) throw new Error("http");
-      return r.json();
-    }).then(function (j) {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      var tags = j && j.elements && j.elements[0] && j.elements[0].tags;
-      done(sportsFromTags(tags));
-    }).catch(function () {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timer);
-      done(null);
-    });
+    var entry = osmSportsCache[sel.osm];
+    if (!entry) {
+      entry = { state: "pending", tags: null, waiters: [] };
+      osmSportsCache[sel.osm] = entry;
+      var t = sel.osm.charAt(0);
+      var word = t === "n" ? "node" : (t === "w" ? "way" : "relation");
+      var q = "[out:json][timeout:10];" + word + "(" + sel.osm.slice(1) + ");out tags;";
+      var settle = function (value, ok) {
+        if (entry.state !== "pending") return;
+        entry.state = ok ? "done" : "failed";
+        entry.tags = value;
+        if (!ok) delete osmSportsCache[sel.osm];
+        var w = entry.waiters;
+        entry.waiters = [];
+        for (var i = 0; i < w.length; i++) w[i](value);
+      };
+      setTimeout(function () { settle(null, false); }, 9000);
+      fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function (r) {
+        if (!r.ok) throw new Error("http");
+        return r.json();
+      }).then(function (j) {
+        var tags = j && j.elements && j.elements[0] && j.elements[0].tags;
+        settle(sportsFromTags(tags), true);
+      }).catch(function () { settle(null, false); });
+    }
+    if (entry.state === "done") { done(entry.tags); return; }
+    var called = false;
+    var finish = function (v) { if (called) return; called = true; done(v); };
+    entry.waiters.push(finish);
+    setTimeout(function () { finish(null); }, maxWait || 9000);
   }
 
   function normName(s) {
@@ -2290,6 +2300,7 @@
       return;
     }
     selected = s;
+    fetchOsmSports(s, function () {}, 1);
     searchEl.value = s.name;
     renderSuggest();
     renderCreate();
@@ -2353,7 +2364,7 @@
       }
       var list = tagSports && tagSports.length ? tagSports : (sel.sports && sel.sports.length ? sel.sports : defaultSports(sel.kind, sel.name));
       doCreatePlace(sel, list, true);
-    });
+    }, 2500);
   }
 
   function doCreatePlace(sel, sportsList, withSports) {
