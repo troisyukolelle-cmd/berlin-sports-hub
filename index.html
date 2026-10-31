@@ -242,6 +242,16 @@
     100% { opacity: 0; transform: translate(-50%, -64%) scale(1); }
   }
   @media (prefers-reduced-motion: reduce) { .fx .ball { display: none; } }
+  .invite {
+    position: fixed; left: 12px; right: 12px; bottom: 14px; z-index: 50; max-width: 520px; margin: 0 auto;
+    background: #ffffff; color: #1f2328; border-radius: 18px; padding: 14px 16px; box-shadow: 0 8px 26px rgba(0,0,0,0.45);
+  }
+  .invite b { display: block; font-size: 16px; margin-bottom: 4px; }
+  .invite p { margin: 0 0 10px 0; font-size: 13px; color: #44494f; line-height: 1.4; }
+  .invite .row { display: flex; gap: 8px; }
+  .invite button { font-family: inherit; font-size: 15px; font-weight: 800; border: none; border-radius: 12px; padding: 11px 14px; cursor: pointer; }
+  .invite .go { flex: 1; background: #25d366; color: #ffffff; }
+  .invite .no { background: #eceff1; color: #44494f; }
   .toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     background: #ffffff; color: #1f2328; padding: 12px 18px; border-radius: 14px;
@@ -434,6 +444,37 @@
     toastEl.style.display = "block";
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.style.display = "none"; }, 3800);
+  }
+
+  var inviteEl = null;
+  function showInvite(shareFn, placeName) {
+    if (inviteEl && inviteEl.parentNode) inviteEl.parentNode.removeChild(inviteEl);
+    var box = document.createElement("div");
+    box.className = "invite";
+    var t = document.createElement("b");
+    t.textContent = "🎉 Du bist dabei! Hol deine Leute dazu";
+    var p = document.createElement("p");
+    p.textContent = "Je mehr Freunde sich eintragen, desto eher findet das Spiel am " + placeName + " statt. Ein Tipp schickt ihnen den Link per WhatsApp.";
+    var row = document.createElement("div");
+    row.className = "row";
+    var go = document.createElement("button");
+    go.type = "button";
+    go.className = "go";
+    go.textContent = "Per WhatsApp einladen";
+    go.addEventListener("click", function () { box.parentNode && box.parentNode.removeChild(box); shareFn(); });
+    var no = document.createElement("button");
+    no.type = "button";
+    no.className = "no";
+    no.textContent = "Später";
+    no.addEventListener("click", function () { box.parentNode && box.parentNode.removeChild(box); });
+    row.appendChild(go);
+    row.appendChild(no);
+    box.appendChild(t);
+    box.appendChild(p);
+    box.appendChild(row);
+    document.body.appendChild(box);
+    inviteEl = box;
+    setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 20000);
   }
 
   var FX_TEXT = {
@@ -1253,6 +1294,7 @@
         var val = snap && snap.val();
         if (!wasJoined && val) joined[tk] = String(val.sid || 0);
         if (!wasJoined && val) bump("joins");
+        if (!wasJoined && val) setTimeout(function () { showInvite(function () { c.shareBtn.click(); }, String(v.name)); }, 1400);
         if (authUser && profile) {
           if (!wasJoined && val) {
             var pk = key + "_" + sp + "_" + (val.sid || 0);
