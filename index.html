@@ -5,6 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#25282d">
 <title>Berlin Sports Hub</title>
+<meta name="description" content="Finde spontan Mitspieler für Basketball, Fußball und Volleyball an Berliner Parks und Bolzplätzen. Kostenlos, ohne Anmeldung.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sports Hub">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Berlin Sports Hub">
+<meta property="og:locale" content="de_DE">
+<meta property="og:title" content="Berlin Sports Hub – Mitspieler finden">
+<meta property="og:description" content="Wer spielt heute? Basketball, Fußball und Volleyball in Berlin. Kostenlos, ohne Anmeldung.">
+<meta property="og:url" content="https://berlinsportshub.app/">
+<meta property="og:image" content="https://berlinsportshub.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://berlinsportshub.app/og.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -150,6 +168,7 @@
   }
   .join.leave { background: #ef4444; }
   .join:active { transform: scale(0.98); }
+  .chip-place { margin: 6px 4px 0 4px; padding: 8px 12px; font-family: inherit; font-size: 13px; font-weight: 700; color: #ffffff; background: #2f3338; border: 2px solid #3a3f46; border-radius: 999px; cursor: pointer; }
   .share {
     width: 100%; margin-top: 10px; padding: 14px; font-size: 16px; font-weight: 700;
     color: #067a56; background: #e7f9f2; border: 2px solid #10b981; border-radius: 14px; cursor: pointer;
@@ -1551,6 +1570,23 @@
 
     if (total === 0) {
       emptyArea.innerHTML = '<div class="empty"><span class="big">🏟️</span>Noch nichts los hier.<br>Tippe oben den Namen eines Parks oder Bolzplatzes ein und wähle ihn aus der Liste.</div>';
+      var chipBox = document.createElement("div");
+      chipBox.className = "empty";
+      chipBox.appendChild(document.createTextNode("Oder starte mit einem bekannten Platz:"));
+      chipBox.appendChild(document.createElement("br"));
+      ["Mauerpark", "Tempelhofer Feld", "Volkspark Friedrichshain", "Hasenheide", "Görlitzer Park", "Volkspark Humboldthain"].forEach(function (nm) {
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip-place";
+        chip.textContent = nm;
+        chip.addEventListener("click", function () {
+          searchEl.value = nm;
+          searchEl.dispatchEvent(new Event("input"));
+          searchEl.focus();
+        });
+        chipBox.appendChild(chip);
+      });
+      emptyArea.appendChild(chipBox);
     } else if (q && main.length === 0) {
       emptyArea.innerHTML = '<div class="empty">Noch kein aktivierter Platz mit diesem Namen' + (areaSel ? ' in diesem Bezirk' : '') + '.<br>Wähle ihn oben aus der Liste, um ihn zu aktivieren.</div>';
     } else if (!q && main.length === 0 && areaSel) {
@@ -3178,6 +3214,11 @@
     }
   });
 })();
+</script>
+<script>
+if ("serviceWorker" in navigator && /^https:/.test(window.location.protocol)) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });
+}
 </script>
 </body>
 </html>
