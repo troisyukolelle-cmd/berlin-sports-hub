@@ -363,9 +363,21 @@
   .create-btn { border-radius: 18px; }
   .sug-box { background: #262a2f; border: 1px solid #343941; border-radius: 18px; }
   .mapseg { margin-top: 10px; }
+  .mp { min-width: 210px; font-family: inherit; }
+  .mp-title { display: block; font-size: 16px; color: #1f2328; }
+  .mp-sub { margin: 2px 0 8px 0; font-size: 12px; color: #5b636c; }
+  .mp-sports { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mp-sport { flex: 1; padding: 8px 4px; font-size: 16px; font-weight: 800; color: #3b424a; background: #f0f2f5; border: 2px solid transparent; border-radius: 10px; cursor: pointer; }
+  .mp-sport.on { background: #e7f9f2; border-color: #10b981; color: #067a56; }
+  .mp-info { margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #3b424a; line-height: 1.4; }
+  .mp-sels { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mp-sels select { flex: 1; min-width: 0; padding: 8px 6px; font-size: 14px; border: 2px solid #d9dde2; border-radius: 10px; background: #f3f5f7; color: #1f2328; }
+  .mp-join { display: block; width: 100%; padding: 11px; font-family: inherit; font-size: 16px; font-weight: 800; color: #fff; background: #10b981; border: none; border-radius: 12px; cursor: pointer; }
+  .mp-join.leave { background: #ef4444; }
+  .mp-more { display: block; width: 100%; margin-top: 6px; padding: 7px; font-family: inherit; font-size: 12px; font-weight: 700; color: #067a56; background: transparent; border: none; cursor: pointer; }
   .map-cta { display: block; width: 100%; margin-top: 10px; padding: 15px 16px; font-family: inherit; font-size: 16px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.10); border: 1.5px solid #10b981; border-radius: 16px; cursor: pointer; }
   .map-cta:active { transform: scale(0.99); }
-  #map { height: 340px; border: 1px solid #343941; }
+  #map { height: 400px; border: 1px solid #343941; }
   .nick-btn { margin: 22px auto 0 auto; width: auto; display: block; padding: 8px 16px; text-align: center; border: 1px solid #3a3f46; border-radius: 999px; font-size: 13px; }
   .hint { margin-top: 14px; font-size: 12px; }
 </style>
@@ -491,6 +503,9 @@
   var mapCandTimer = null;
   var mapCandSeq = 0;
   var mapUserMoved = false;
+  var mapMarkers = {};
+  var mapPopupKey = null;
+  var mapRedrawing = false;
   var nearBtn = document.getElementById("nearBtn");
   var nickBtn = document.getElementById("nickBtn");
   var myNick = "";
@@ -2544,6 +2559,88 @@
     return d;
   }
 
+  function renderPlacePopup(box, key) {
+    var v = data[key];
+    var c = cards[key];
+    box.innerHTML = "";
+    if (!v || !c) { box.textContent = "Dieser Platz ist nicht mehr verfügbar."; return; }
+    updateCard(c, v);
+    var avail = sportsOfPlace(v);
+    var title = document.createElement("b");
+    title.className = "mp-title";
+    title.textContent = v.name;
+    box.appendChild(title);
+    var sub = document.createElement("div");
+    sub.className = "mp-sub";
+    sub.textContent = (v.kind || "Platz") + (v.area ? " · " + v.area : "");
+    box.appendChild(sub);
+
+    var row = document.createElement("div");
+    row.className = "mp-sports";
+    avail.forEach(function (id) {
+      var sp = sportById(id);
+      var si = sess(v, id);
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "mp-sport" + (id === c.sport ? " on" : "");
+      b.textContent = sp.icon + (isActive(si) ? " " + si.players : "");
+      b.title = sp.name;
+      b.addEventListener("click", function () { c.sport = id; setTimeout(function () { renderPlacePopup(box, key); }, 0); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+
+    var sp0 = sportById(c.sport);
+    var s0 = sess(v, c.sport);
+    var active = isActive(s0);
+    var info = document.createElement("div");
+    info.className = "mp-info";
+    if (active) {
+      var lbl = dateLabel(s0.date);
+      info.textContent = sp0.name + ": 👥 " + s0.players + " angemeldet · " + (lbl === "Heute" || lbl === "Morgen" ? lbl : "Am " + lbl) + ", " + s0.time + " Uhr";
+      box.appendChild(info);
+    } else {
+      info.textContent = sp0.name + ": Noch niemand. Wähle Tag und Uhrzeit:";
+      box.appendChild(info);
+      var sels = document.createElement("div");
+      sels.className = "mp-sels";
+      [["date", c.dsel], ["time", c.tsel]].forEach(function (pair) {
+        var sel = document.createElement("select");
+        for (var i = 0; i < pair[1].options.length; i++) {
+          var o = document.createElement("option");
+          o.value = pair[1].options[i].value;
+          o.textContent = pair[1].options[i].textContent;
+          sel.appendChild(o);
+        }
+        sel.value = pair[0] === "date" ? c.date : c.time;
+        sel.addEventListener("change", function () { c[pair[0]] = sel.value; });
+        sels.appendChild(sel);
+      });
+      box.appendChild(sels);
+    }
+
+    var joined = isJoined(key, c.sport);
+    var go = document.createElement("button");
+    go.type = "button";
+    go.className = "mp-join" + (joined ? " leave" : "");
+    go.textContent = joined ? "Absagen" : "Ich bin dabei";
+    go.addEventListener("click", function () {
+      c.joinBtn.click();
+      setTimeout(function () { if (box.parentNode) renderPlacePopup(box, key); }, 900);
+    });
+    box.appendChild(go);
+
+    var more = document.createElement("button");
+    more.type = "button";
+    more.className = "mp-more";
+    more.textContent = "Details und Chat ansehen";
+    more.addEventListener("click", function () {
+      try { mapObj.closePopup(); } catch (e) {}
+      jumpToPlace(key, c.sport);
+    });
+    box.appendChild(more);
+  }
+
   function candFromElement(el, ty) {
     var mode = ty || typeSel;
     var t = el.type === "node" ? "n" : (el.type === "way" ? "w" : (el.type === "relation" ? "r" : ""));
@@ -2717,6 +2814,8 @@
 
   function updateMap() {
     if (!mapObj || !mapLayer) return;
+    mapRedrawing = true;
+    mapMarkers = {};
     mapLayer.clearLayers();
     var pts = [];
     var known = [];
@@ -2732,8 +2831,16 @@
         var m = L.circleMarker([pv.lat, pv.lon], {
           radius: act ? 12 : 9, color: "#065f46", weight: 2, fillColor: "#10b981", fillOpacity: act ? 0.95 : 0.6
         });
-        m.bindTooltip(makeTip(pv.name, act ? "Spiel läuft – tippen zum Anmelden" : "Platz aktiviert"));
-        m.on("click", function () { jumpToPlace(key, null); });
+        m.bindTooltip(makeTip(pv.name, act ? "Spiel angesetzt – antippen zum Anmelden" : "Platz aktiviert – antippen"));
+        m.bindPopup(function () {
+          var box = document.createElement("div");
+          box.className = "mp";
+          if (L.DomEvent) L.DomEvent.disableClickPropagation(box);
+          renderPlacePopup(box, key);
+          return box;
+        }, { maxWidth: 280, minWidth: 230 });
+        m.on("popupopen", function () { mapPopupKey = key; mapUserMoved = true; });
+        mapMarkers[key] = m;
         m.addTo(mapLayer);
       })(k, v);
     }
@@ -2778,6 +2885,10 @@
       }
       hintEl.textContent = msg;
     }
+    if (mapPopupKey && mapMarkers[mapPopupKey]) {
+      try { mapMarkers[mapPopupKey].openPopup(); } catch (e) {}
+    }
+    mapRedrawing = false;
   }
 
   if (typeof L !== "undefined" && L && typeof L.map === "function") {
@@ -2787,13 +2898,15 @@
       mapWrap.style.display = mapOpen ? "" : "none";
       mapToggle.textContent = mapOpen ? "🗺️ Karte ausblenden" : "🗺️ Alle Plätze auf der Karte";
       if (mapOpen && !mapObj) {
-        mapObj = L.map("map", { zoomControl: true, zoomSnap: 0.5, wheelDebounceTime: 80 }).setView([52.52, 13.405], 12);
+        mapObj = L.map("map", { zoomControl: false, zoomSnap: 0.5, wheelDebounceTime: 80 }).setView([52.52, 13.405], 12);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19, keepBuffer: 4, updateWhenIdle: true, attribution: "&copy; OpenStreetMap-Mitwirkende"
         }).addTo(mapObj);
+        L.control.zoom({ position: "bottomright" }).addTo(mapObj);
         mapLayer = L.layerGroup().addTo(mapObj);
         mapCandLayer = L.layerGroup().addTo(mapObj);
         mapObj.on("dragstart", function () { mapUserMoved = true; });
+        mapObj.on("popupclose", function () { if (!mapRedrawing) mapPopupKey = null; });
         mapObj.on("moveend", function () { drawCands(); scheduleMapCands(); });
         var zc = document.querySelector(".leaflet-control-zoom");
         if (zc) zc.addEventListener("click", function () { mapUserMoved = true; });
