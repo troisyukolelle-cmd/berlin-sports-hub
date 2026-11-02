@@ -2693,27 +2693,35 @@
   ];
   var mapRegions = [];
   var mapAbort = null;
+  var mapRetried = false;
 
   function overpassFetch(q, done) {
-    var idx = 0;
-    (function next() {
-      if (idx >= OVERPASS_URLS.length) { done(new Error("all failed")); return; }
-      var url = OVERPASS_URLS[idx++] + "?data=" + encodeURIComponent(q);
+    var finished = false;
+    var failed = 0;
+    var ctls = [];
+    function finish(err, j) {
+      if (finished) return;
+      finished = true;
+      for (var i = 0; i < ctls.length; i++) { try { ctls[i].abort(); } catch (e) {} }
+      done(err, j);
+    }
+    OVERPASS_URLS.forEach(function (base) {
       var ctl = (typeof AbortController === "function") ? new AbortController() : null;
-      mapAbort = ctl;
-      var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 9000);
-      fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) {
+      if (ctl) ctls.push(ctl);
+      var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 14000);
+      fetch(base + "?data=" + encodeURIComponent(q), ctl ? { signal: ctl.signal } : undefined).then(function (r) {
         if (!r.ok) throw new Error("http");
         return r.json();
       }).then(function (j) {
         clearTimeout(timer);
-        done(null, j);
-      }).catch(function (e) {
+        if (!j || !Array.isArray(j.elements)) throw new Error("bad");
+        finish(null, j);
+      }).catch(function () {
         clearTimeout(timer);
-        if (e && e.name === "AbortError" && ctl && ctl.__cancelled) { done(e); return; }
-        next();
+        failed++;
+        if (failed >= OVERPASS_URLS.length) finish(new Error("all failed"));
       });
-    })();
+    });
   }
 
   function regionCovers(r, b) {
@@ -2736,8 +2744,8 @@
         return;
       }
     }
-    var padLat = (b.getNorth() - b.getSouth()) * 0.4;
-    var padLon = (b.getEast() - b.getWest()) * 0.4;
+    var padLat = (b.getNorth() - b.getSouth()) * 0.25;
+    var padLon = (b.getEast() - b.getWest()) * 0.25;
     var rs = Math.max(b.getSouth() - padLat, BERLIN.minLat);
     var rw = Math.max(b.getWest() - padLon, BERLIN.minLon);
     var rn = Math.min(b.getNorth() + padLat, BERLIN.maxLat);
@@ -2748,12 +2756,17 @@
       : '[out:json][timeout:20];nwr["leisure"~"^(pitch|park|stadium|common|beach_resort)$"]["name"]' + bb + ';out center tags 300;';
     var seq = ++mapCandSeq;
     var type = typeSel;
-    if (mapAbort) { mapAbort.__cancelled = true; try { mapAbort.abort(); } catch (e) {} }
     setMapHint("Lade Plätze ...");
     overpassFetch(q, function (err, j) {
       if (seq !== mapCandSeq) return;
       if (err) {
-        setMapHint("Die Plätze konnten gerade nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.");
+        if (!mapRetried) {
+          mapRetried = true;
+          setMapHint("Ladefehler, versuche es nochmal ...");
+          setTimeout(fetchMapCands, 2500);
+        } else {
+          setMapHint("Plätze konnten nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.");
+        }
         return;
       }
       var out = [];
@@ -2765,6 +2778,7 @@
         seen[c.key] = true;
         out.push(c);
       }
+      mapRetried = false;
       mapRegions.push({ type: type, s: rs, w: rw, n: rn, e: re, list: out });
       if (mapRegions.length > 8) mapRegions.shift();
       if (type === typeSel) {
