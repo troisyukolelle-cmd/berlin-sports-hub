@@ -357,6 +357,7 @@
   .share { border-radius: 14px; background: #ffffff; border: 1.5px solid #10b981; }
   .create-btn { border-radius: 18px; }
   .sug-box { background: #262a2f; border: 1px solid #343941; border-radius: 18px; }
+  .mapseg { margin-top: 10px; }
   .map-cta { display: block; width: 100%; margin-top: 10px; padding: 15px 16px; font-family: inherit; font-size: 16px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.10); border: 1.5px solid #10b981; border-radius: 16px; cursor: pointer; }
   .map-cta:active { transform: scale(0.99); }
   #map { height: 340px; border: 1px solid #343941; }
@@ -396,8 +397,12 @@
     <select id="areaSel"><option value="">Alle Bezirke</option></select>
   </div>
   <div id="mapWrap" style="display:none">
+    <div class="seg mapseg" id="mapType">
+      <button type="button" class="tool-btn on" id="mapOut">🌳 Draußen</button>
+      <button type="button" class="tool-btn" id="mapHall">🏠 Hallen</button>
+    </div>
     <div id="map"></div>
-    <div class="map-legend">🟢 aktivierte Plätze · 🔵 Vorschläge zur Suche · 🟠 deine Auswahl. Tippe einen Punkt an.</div>
+    <div class="map-legend">🟢 aktivierte Plätze · 🔵 Plätze zum Aktivieren (tippe einen Punkt an) · 🟠 deine Auswahl.</div>
     <div class="map-hint" id="mapHint"></div>
   </div>
   <div class="dash">
@@ -475,6 +480,12 @@
   var mapObj = null;
   var mapLayer = null;
   var mapOpen = false;
+  var mapCandLayer = null;
+  var mapCands = [];
+  var mapCandCache = {};
+  var mapCandTimer = null;
+  var mapCandSeq = 0;
+  var mapUserMoved = false;
   var nearBtn = document.getElementById("nearBtn");
   var nickBtn = document.getElementById("nickBtn");
   var myNick = "";
@@ -2012,6 +2023,15 @@
     var bh = document.getElementById("typeHall");
     bo.className = "tool-btn" + (typeSel === "out" ? " on" : "");
     bh.className = "tool-btn" + (typeSel === "hall" ? " on" : "");
+    var mo = document.getElementById("mapOut");
+    var mh = document.getElementById("mapHall");
+    if (mo && mh) {
+      mo.className = "tool-btn" + (typeSel === "out" ? " on" : "");
+      mh.className = "tool-btn" + (typeSel === "hall" ? " on" : "");
+    }
+    mapUserMoved = false;
+    mapCands = [];
+    if (typeof scheduleMapCands === "function") scheduleMapCands();
     searchEl.placeholder = typeSel === "hall" ? "Such deine Sporthalle oder Turnhalle..." : "Such deinen lokalen Bolzplatz oder Park...";
     selected = null;
     sugSeq++;
@@ -2392,6 +2412,7 @@
       toast("Diesen Platz gibt es schon. Du kannst dich direkt dort anmelden.");
       return;
     }
+    mapUserMoved = false;
     selected = s;
     fetchOsmSports(s, function () {}, 1);
     searchEl.value = s.name;
@@ -2504,6 +2525,118 @@
     return d;
   }
 
+  function candFromElement(el) {
+    var t = el.type === "node" ? "n" : (el.type === "way" ? "w" : (el.type === "relation" ? "r" : ""));
+    var tags = el.tags || {};
+    var name = typeof tags.name === "string" ? tags.name.trim() : "";
+    if (!t || !name || name.length > 60) return null;
+    var lat = el.center ? el.center.lat : el.lat;
+    var lon = el.center ? el.center.lon : el.lon;
+    if (typeof lat !== "number" || typeof lon !== "number") return null;
+    if (lat < BERLIN.minLat || lat > BERLIN.maxLat || lon < BERLIN.minLon || lon > BERLIN.maxLon) return null;
+    var hall = tags.leisure === "sports_hall" || tags.building === "sports_hall" || tags.leisure === "sports_centre";
+    if (typeSel === "hall") {
+      if (!hall && !/(sporthalle|turnhalle|sportzentrum)/.test(normName(name))) return null;
+    } else {
+      if (tags.leisure === "sports_hall" || tags.building === "sports_hall") return null;
+      if (UNPLAYABLE_RE.test(normName(name))) return null;
+      var fromTags = sportsFromTags(tags);
+      if (fromTags && fromTags.length === 0) return null;
+    }
+    var osm = t + String(el.id);
+    if (!/^[nwr][0-9]{1,15}$/.test(osm)) return null;
+    var kind = typeSel === "hall" ? "Sporthalle" : (LEISURE_KINDS.hasOwnProperty(tags.leisure) ? LEISURE_KINDS[tags.leisure] : "Sport-/Bolzplatz");
+    return {
+      key: "osm-" + osm, osm: osm, name: name,
+      lat: Math.round(lat * 100000) / 100000, lon: Math.round(lon * 100000) / 100000,
+      area: String(tags["addr:suburb"] || tags["addr:city"] || "").trim().slice(0, 80),
+      kind: kind,
+      sports: typeSel === "hall" ? ALL_SPORT_IDS.slice() : (sportsFromTags(tags) && sportsFromTags(tags).length ? sportsFromTags(tags) : defaultSports(kind, name))
+    };
+  }
+
+  function fetchMapCands() {
+    if (!mapObj || !mapOpen || typeof fetch !== "function") return;
+    var hintEl = document.getElementById("mapHint");
+    if (mapObj.getZoom() < 12) {
+      mapCands = [];
+      drawCands();
+      if (hintEl) hintEl.textContent = "Zoome näher heran, um Plätze zum Aktivieren zu sehen.";
+      return;
+    }
+    var b = mapObj.getBounds();
+    var s0 = Math.max(b.getSouth(), BERLIN.minLat).toFixed(3);
+    var w0 = Math.max(b.getWest(), BERLIN.minLon).toFixed(3);
+    var n0 = Math.min(b.getNorth(), BERLIN.maxLat).toFixed(3);
+    var e0 = Math.min(b.getEast(), BERLIN.maxLon).toFixed(3);
+    var key = typeSel + "|" + s0 + "|" + w0 + "|" + n0 + "|" + e0;
+    if (mapCandCache[key]) { mapCands = mapCandCache[key]; drawCands(); return; }
+    var bb = "(" + s0 + "," + w0 + "," + n0 + "," + e0 + ")";
+    var q = typeSel === "hall"
+      ? '[out:json][timeout:20];(nwr["leisure"~"^(sports_hall|sports_centre)$"]["name"]' + bb + ';nwr["building"="sports_hall"]["name"]' + bb + ');out center tags 120;'
+      : '[out:json][timeout:20];nwr["leisure"~"^(pitch|park|stadium|common|beach_resort)$"]["name"]' + bb + ';out center tags 150;';
+    var seq = ++mapCandSeq;
+    if (hintEl) hintEl.textContent = "Lade Plätze in diesem Kartenausschnitt ...";
+    fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function (r) {
+      if (!r.ok) throw new Error("http");
+      return r.json();
+    }).then(function (j) {
+      if (seq !== mapCandSeq) return;
+      var out = [];
+      var seen = {};
+      var els = (j && j.elements) || [];
+      for (var i = 0; i < els.length; i++) {
+        var c = candFromElement(els[i]);
+        if (!c || seen[c.key]) continue;
+        seen[c.key] = true;
+        out.push(c);
+      }
+      mapCandCache[key] = out;
+      mapCands = out;
+      drawCands();
+      if (hintEl) hintEl.textContent = out.length ? out.length + (out.length === 1 ? " Platz" : " Plätze") + " im Kartenausschnitt. Tippe einen blauen Punkt an." : "In diesem Ausschnitt wurden keine Plätze gefunden. Verschiebe die Karte.";
+    }).catch(function () {
+      if (seq !== mapCandSeq) return;
+      if (hintEl) hintEl.textContent = "Die Plätze konnten gerade nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.";
+    });
+  }
+
+  function scheduleMapCands() {
+    if (mapCandTimer) clearTimeout(mapCandTimer);
+    mapCandTimer = setTimeout(fetchMapCands, 700);
+  }
+
+  function drawCands() {
+    if (!mapObj || !mapCandLayer) return;
+    mapCandLayer.clearLayers();
+    for (var i = 0; i < mapCands.length; i++) {
+      (function (c) {
+        var ex = findExisting(c);
+        if (ex) return;
+        var m = L.circleMarker([c.lat, c.lon], { radius: 9, color: "#1d4ed8", weight: 2, fillColor: "#60a5fa", fillOpacity: 0.85 });
+        var box = document.createElement("div");
+        var nm = document.createElement("b");
+        nm.textContent = c.name;
+        box.appendChild(nm);
+        var sub = document.createElement("div");
+        sub.style.cssText = "margin:2px 0 8px 0;font-size:12px;color:#5b636c";
+        sub.textContent = c.kind + (c.area ? " · " + c.area : "") + " · " + sportEmojis(c.sports);
+        box.appendChild(sub);
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "➕ Platz aktivieren";
+        btn.style.cssText = "width:100%;padding:9px 10px;font-size:14px;font-weight:800;color:#fff;background:#10b981;border:none;border-radius:10px;cursor:pointer";
+        btn.addEventListener("click", function () {
+          try { mapObj.closePopup(); } catch (e) {}
+          createPlace(c);
+        });
+        box.appendChild(btn);
+        m.bindPopup(box);
+        m.addTo(mapCandLayer);
+      })(mapCands[i]);
+    }
+  }
+
   function updateMap() {
     if (!mapObj || !mapLayer) return;
     mapLayer.clearLayers();
@@ -2549,11 +2682,14 @@
       um.addTo(mapLayer);
       if (nearOn) known.push([userPos.lat, userPos.lon]);
     }
-    if (pts.length > 0) {
-      try { mapObj.fitBounds(pts, { padding: [30, 30], maxZoom: 15 }); } catch (e) {}
-    } else if (known.length > 0) {
-      try { mapObj.fitBounds(known, { padding: [30, 30], maxZoom: 14 }); } catch (e) {}
+    if (!mapUserMoved) {
+      if (pts.length > 0) {
+        try { mapObj.fitBounds(pts, { padding: [30, 30], maxZoom: 15 }); } catch (e) {}
+      } else if (known.length > 0) {
+        try { mapObj.fitBounds(known, { padding: [30, 30], maxZoom: 14 }); } catch (e) {}
+      }
     }
+    drawCands();
     var hintEl = document.getElementById("mapHint");
     if (hintEl) {
       var msg = "";
@@ -2578,9 +2714,14 @@
           maxZoom: 19, attribution: "&copy; OpenStreetMap-Mitwirkende"
         }).addTo(mapObj);
         mapLayer = L.layerGroup().addTo(mapObj);
+        mapCandLayer = L.layerGroup().addTo(mapObj);
+        mapObj.on("dragstart", function () { mapUserMoved = true; });
+        mapObj.on("moveend", scheduleMapCands);
+        var zc = document.querySelector(".leaflet-control-zoom");
+        if (zc) zc.addEventListener("click", function () { mapUserMoved = true; });
       }
       if (mapOpen && mapObj) {
-        setTimeout(function () { mapObj.invalidateSize(); updateMap(); }, 60);
+        setTimeout(function () { mapObj.invalidateSize(); updateMap(); scheduleMapCands(); }, 60);
       }
     });
   }
@@ -3355,6 +3496,8 @@
 
   document.getElementById("typeOut").addEventListener("click", function () { if (typeSel !== "out") setType("out"); });
   document.getElementById("typeHall").addEventListener("click", function () { if (typeSel !== "hall") setType("hall"); });
+  document.getElementById("mapOut").addEventListener("click", function () { if (typeSel !== "out") setType("out", true); });
+  document.getElementById("mapHall").addEventListener("click", function () { if (typeSel !== "hall") setType("hall", true); });
   setType(typeSel, true);
 
   searchEl.addEventListener("input", function () {
