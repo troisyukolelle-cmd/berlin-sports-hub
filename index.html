@@ -2525,7 +2525,8 @@
     return d;
   }
 
-  function candFromElement(el) {
+  function candFromElement(el, ty) {
+    var mode = ty || typeSel;
     var t = el.type === "node" ? "n" : (el.type === "way" ? "w" : (el.type === "relation" ? "r" : ""));
     var tags = el.tags || {};
     var name = typeof tags.name === "string" ? tags.name.trim() : "";
@@ -2535,7 +2536,7 @@
     if (typeof lat !== "number" || typeof lon !== "number") return null;
     if (lat < BERLIN.minLat || lat > BERLIN.maxLat || lon < BERLIN.minLon || lon > BERLIN.maxLon) return null;
     var hall = tags.leisure === "sports_hall" || tags.building === "sports_hall" || tags.leisure === "sports_centre";
-    if (typeSel === "hall") {
+    if (mode === "hall") {
       if (!hall && !/(sporthalle|turnhalle|sportzentrum)/.test(normName(name))) return null;
     } else {
       if (tags.leisure === "sports_hall" || tags.building === "sports_hall") return null;
@@ -2545,14 +2546,48 @@
     }
     var osm = t + String(el.id);
     if (!/^[nwr][0-9]{1,15}$/.test(osm)) return null;
-    var kind = typeSel === "hall" ? "Sporthalle" : (LEISURE_KINDS.hasOwnProperty(tags.leisure) ? LEISURE_KINDS[tags.leisure] : "Sport-/Bolzplatz");
+    var kind = mode === "hall" ? "Sporthalle" : (LEISURE_KINDS.hasOwnProperty(tags.leisure) ? LEISURE_KINDS[tags.leisure] : "Sport-/Bolzplatz");
     return {
       key: "osm-" + osm, osm: osm, name: name,
       lat: Math.round(lat * 100000) / 100000, lon: Math.round(lon * 100000) / 100000,
       area: String(tags["addr:suburb"] || tags["addr:city"] || "").trim().slice(0, 80),
       kind: kind,
-      sports: typeSel === "hall" ? ALL_SPORT_IDS.slice() : (sportsFromTags(tags) && sportsFromTags(tags).length ? sportsFromTags(tags) : defaultSports(kind, name))
+      sports: mode === "hall" ? ALL_SPORT_IDS.slice() : (sportsFromTags(tags) && sportsFromTags(tags).length ? sportsFromTags(tags) : defaultSports(kind, name))
     };
+  }
+
+  var OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter"
+  ];
+  var mapRegions = [];
+  var mapAbort = null;
+
+  function overpassFetch(q, done) {
+    var idx = 0;
+    (function next() {
+      if (idx >= OVERPASS_URLS.length) { done(new Error("all failed")); return; }
+      var url = OVERPASS_URLS[idx++] + "?data=" + encodeURIComponent(q);
+      var ctl = (typeof AbortController === "function") ? new AbortController() : null;
+      mapAbort = ctl;
+      var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 9000);
+      fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) {
+        if (!r.ok) throw new Error("http");
+        return r.json();
+      }).then(function (j) {
+        clearTimeout(timer);
+        done(null, j);
+      }).catch(function (e) {
+        clearTimeout(timer);
+        if (e && e.name === "AbortError" && ctl && ctl.__cancelled) { done(e); return; }
+        next();
+      });
+    })();
+  }
+
+  function regionCovers(r, b) {
+    return r.type === typeSel && r.s <= b.getSouth() && r.w <= b.getWest() && r.n >= b.getNorth() && r.e >= b.getEast();
   }
 
   function fetchMapCands() {
@@ -2565,54 +2600,78 @@
       return;
     }
     var b = mapObj.getBounds();
-    var s0 = Math.max(b.getSouth(), BERLIN.minLat).toFixed(3);
-    var w0 = Math.max(b.getWest(), BERLIN.minLon).toFixed(3);
-    var n0 = Math.min(b.getNorth(), BERLIN.maxLat).toFixed(3);
-    var e0 = Math.min(b.getEast(), BERLIN.maxLon).toFixed(3);
-    var key = typeSel + "|" + s0 + "|" + w0 + "|" + n0 + "|" + e0;
-    if (mapCandCache[key]) { mapCands = mapCandCache[key]; drawCands(); return; }
-    var bb = "(" + s0 + "," + w0 + "," + n0 + "," + e0 + ")";
+    for (var ri = 0; ri < mapRegions.length; ri++) {
+      if (regionCovers(mapRegions[ri], b)) {
+        mapCands = mapRegions[ri].list;
+        drawCands();
+        return;
+      }
+    }
+    var padLat = (b.getNorth() - b.getSouth()) * 0.4;
+    var padLon = (b.getEast() - b.getWest()) * 0.4;
+    var rs = Math.max(b.getSouth() - padLat, BERLIN.minLat);
+    var rw = Math.max(b.getWest() - padLon, BERLIN.minLon);
+    var rn = Math.min(b.getNorth() + padLat, BERLIN.maxLat);
+    var re = Math.min(b.getEast() + padLon, BERLIN.maxLon);
+    var bb = "(" + rs.toFixed(4) + "," + rw.toFixed(4) + "," + rn.toFixed(4) + "," + re.toFixed(4) + ")";
     var q = typeSel === "hall"
-      ? '[out:json][timeout:20];(nwr["leisure"~"^(sports_hall|sports_centre)$"]["name"]' + bb + ';nwr["building"="sports_hall"]["name"]' + bb + ');out center tags 120;'
-      : '[out:json][timeout:20];nwr["leisure"~"^(pitch|park|stadium|common|beach_resort)$"]["name"]' + bb + ';out center tags 150;';
+      ? '[out:json][timeout:20];(nwr["leisure"~"^(sports_hall|sports_centre)$"]["name"]' + bb + ';nwr["building"="sports_hall"]["name"]' + bb + ');out center tags 250;'
+      : '[out:json][timeout:20];nwr["leisure"~"^(pitch|park|stadium|common|beach_resort)$"]["name"]' + bb + ';out center tags 300;';
     var seq = ++mapCandSeq;
-    if (hintEl) hintEl.textContent = "Lade Plätze in diesem Kartenausschnitt ...";
-    fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function (r) {
-      if (!r.ok) throw new Error("http");
-      return r.json();
-    }).then(function (j) {
+    var type = typeSel;
+    if (mapAbort) { mapAbort.__cancelled = true; try { mapAbort.abort(); } catch (e) {} }
+    if (hintEl) hintEl.textContent = "Lade Plätze ...";
+    overpassFetch(q, function (err, j) {
       if (seq !== mapCandSeq) return;
+      if (err) {
+        if (hintEl) hintEl.textContent = "Die Plätze konnten gerade nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.";
+        return;
+      }
       var out = [];
       var seen = {};
       var els = (j && j.elements) || [];
       for (var i = 0; i < els.length; i++) {
-        var c = candFromElement(els[i]);
+        var c = candFromElement(els[i], type);
         if (!c || seen[c.key]) continue;
         seen[c.key] = true;
         out.push(c);
       }
-      mapCandCache[key] = out;
-      mapCands = out;
-      drawCands();
-      if (hintEl) hintEl.textContent = out.length ? out.length + (out.length === 1 ? " Platz" : " Plätze") + " im Kartenausschnitt. Tippe einen blauen Punkt an." : "In diesem Ausschnitt wurden keine Plätze gefunden. Verschiebe die Karte.";
-    }).catch(function () {
-      if (seq !== mapCandSeq) return;
-      if (hintEl) hintEl.textContent = "Die Plätze konnten gerade nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.";
+      mapRegions.push({ type: type, s: rs, w: rw, n: rn, e: re, list: out });
+      if (mapRegions.length > 8) mapRegions.shift();
+      if (type === typeSel) {
+        mapCands = out;
+        drawCands();
+      }
     });
   }
 
   function scheduleMapCands() {
     if (mapCandTimer) clearTimeout(mapCandTimer);
-    mapCandTimer = setTimeout(fetchMapCands, 700);
+    mapCandTimer = setTimeout(fetchMapCands, 450);
   }
 
   function drawCands() {
     if (!mapObj || !mapCandLayer) return;
     mapCandLayer.clearLayers();
+    var b = mapObj.getBounds().pad(0.1);
+    var c0 = mapObj.getCenter();
+    var vis = [];
     for (var i = 0; i < mapCands.length; i++) {
+      var c = mapCands[i];
+      if (!b.contains([c.lat, c.lon])) continue;
+      if (findExisting(c)) continue;
+      vis.push(c);
+    }
+    vis.sort(function (a, z) {
+      return (Math.abs(a.lat - c0.lat) + Math.abs(a.lon - c0.lng)) - (Math.abs(z.lat - c0.lat) + Math.abs(z.lon - c0.lng));
+    });
+    vis = vis.slice(0, 120);
+    var hintEl = document.getElementById("mapHint");
+    if (hintEl && mapObj.getZoom() >= 12) {
+      hintEl.textContent = vis.length ? vis.length + (vis.length === 1 ? " Platz" : " Plätze") + " im Kartenausschnitt. Tippe einen blauen Punkt an." : "In diesem Ausschnitt wurden keine Plätze gefunden. Verschiebe die Karte.";
+    }
+    for (var k = 0; k < vis.length; k++) {
       (function (c) {
-        var ex = findExisting(c);
-        if (ex) return;
         var m = L.circleMarker([c.lat, c.lon], { radius: 9, color: "#1d4ed8", weight: 2, fillColor: "#60a5fa", fillOpacity: 0.85 });
         var box = document.createElement("div");
         var nm = document.createElement("b");
@@ -2633,7 +2692,7 @@
         box.appendChild(btn);
         m.bindPopup(box);
         m.addTo(mapCandLayer);
-      })(mapCands[i]);
+      })(vis[k]);
     }
   }
 
@@ -2709,14 +2768,14 @@
       mapWrap.style.display = mapOpen ? "" : "none";
       mapToggle.textContent = mapOpen ? "🗺️ Karte ausblenden" : "🗺️ Alle Plätze auf der Karte";
       if (mapOpen && !mapObj) {
-        mapObj = L.map("map", { zoomControl: true }).setView([52.52, 13.405], 11);
+        mapObj = L.map("map", { zoomControl: true, zoomSnap: 0.5, wheelDebounceTime: 80 }).setView([52.52, 13.405], 12);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19, attribution: "&copy; OpenStreetMap-Mitwirkende"
+          maxZoom: 19, keepBuffer: 4, updateWhenIdle: true, attribution: "&copy; OpenStreetMap-Mitwirkende"
         }).addTo(mapObj);
         mapLayer = L.layerGroup().addTo(mapObj);
         mapCandLayer = L.layerGroup().addTo(mapObj);
         mapObj.on("dragstart", function () { mapUserMoved = true; });
-        mapObj.on("moveend", scheduleMapCands);
+        mapObj.on("moveend", function () { drawCands(); scheduleMapCands(); });
         var zc = document.querySelector(".leaflet-control-zoom");
         if (zc) zc.addEventListener("click", function () { mapUserMoved = true; });
       }
