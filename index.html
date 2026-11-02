@@ -357,6 +357,9 @@
   .share { border-radius: 14px; background: #ffffff; border: 1.5px solid #10b981; }
   .create-btn { border-radius: 18px; }
   .sug-box { background: #262a2f; border: 1px solid #343941; border-radius: 18px; }
+  .map-cta { display: block; width: 100%; margin-top: 10px; padding: 15px 16px; font-family: inherit; font-size: 16px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.10); border: 1.5px solid #10b981; border-radius: 16px; cursor: pointer; }
+  .map-cta:active { transform: scale(0.99); }
+  #map { height: 340px; border: 1px solid #343941; }
   .nick-btn { margin: 22px auto 0 auto; width: auto; display: block; padding: 8px 16px; text-align: center; border: 1px solid #3a3f46; border-radius: 999px; font-size: 13px; }
   .hint { margin-top: 14px; font-size: 12px; }
 </style>
@@ -384,8 +387,8 @@
   <div class="filters">
     <select id="sareaSel" class="pill-select" aria-label="Suche in Bezirk"><option value="">Ganz Berlin</option></select>
     <button type="button" class="tool-btn" id="nearBtn">📍 In meiner Nähe</button>
-    <button type="button" class="tool-btn" id="mapToggle" style="display:none">🗺️ Karte</button>
   </div>
+  <button type="button" class="map-cta" id="mapToggle" style="display:none">🗺️ Alle Plätze auf der Karte</button>
   <div id="suggest"></div>
   <div id="createArea"></div>
   <div class="arearow" id="areaRow" style="display:none">
@@ -1743,7 +1746,7 @@
     if (/(bolz|kafig|kaefig|streetsoccer)/.test(n)) { add("fussball"); add("basketball"); }
     if (out.length) return SPORTS.map(function (x) { return x.id; }).filter(function (id) { return out.indexOf(id) !== -1; });
     if (kind === "Sport-/Bolzplatz") return ["basketball", "fussball"];
-    if (kind === "Park" || kind === "Grünfläche") return ["fussball", "volleyball"];
+    if (kind === "Park" || kind === "Grünfläche") return ALL_SPORT_IDS.slice();
     if (kind === "Stadion") return ["fussball"];
     if (kind === "Strandbad") return ["volleyball"];
     return ALL_SPORT_IDS.slice();
@@ -1758,6 +1761,7 @@
         if (ALL_SPORT_IDS.indexOf(vals[i]) !== -1 && list.indexOf(vals[i]) === -1) list.push(vals[i]);
       }
     }
+    if (v && (v.kind === "Park" || v.kind === "Grünfläche")) list = ALL_SPORT_IDS.slice();
     if (list.length === 0) list = defaultSports(v ? v.kind : "", v ? v.name : "");
     for (var j = 0; j < SPORTS.length; j++) {
       var s = v && v.sessions && v.sessions[SPORTS[j].id];
@@ -2567,7 +2571,7 @@
     mapToggle.addEventListener("click", function () {
       mapOpen = !mapOpen;
       mapWrap.style.display = mapOpen ? "" : "none";
-      mapToggle.textContent = mapOpen ? "🗺️ Karte ausblenden" : "🗺️ Karte anzeigen";
+      mapToggle.textContent = mapOpen ? "🗺️ Karte ausblenden" : "🗺️ Alle Plätze auf der Karte";
       if (mapOpen && !mapObj) {
         mapObj = L.map("map", { zoomControl: true }).setView([52.52, 13.405], 11);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
