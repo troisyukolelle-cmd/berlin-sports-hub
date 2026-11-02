@@ -363,6 +363,9 @@
   .create-btn { border-radius: 18px; }
   .sug-box { background: #262a2f; border: 1px solid #343941; border-radius: 18px; }
   .mapseg { margin-top: 10px; }
+  .mapbox { position: relative; }
+  .map-loc { width: 34px; height: 34px; margin-bottom: 8px; font-size: 18px; background: #ffffff; border: 2px solid rgba(0,0,0,0.25); border-radius: 4px; cursor: pointer; }
+  .map-banner { position: absolute; top: 10px; left: 10px; right: 10px; margin: 0 auto; width: fit-content; z-index: 500; max-width: 92%; padding: 7px 14px; font-size: 13px; font-weight: 700; line-height: 1.3; text-align: center; color: #ffffff; background: rgba(20,22,26,0.82); border-radius: 999px; pointer-events: none; }
   .mp { min-width: 210px; font-family: inherit; }
   .mp-title { display: block; font-size: 16px; color: #1f2328; }
   .mp-sub { margin: 2px 0 8px 0; font-size: 12px; color: #5b636c; }
@@ -418,7 +421,10 @@
       <button type="button" class="tool-btn on" id="mapOut">🌳 Draußen</button>
       <button type="button" class="tool-btn" id="mapHall">🏠 Hallen</button>
     </div>
-    <div id="map"></div>
+    <div class="mapbox">
+      <div id="map"></div>
+      <div class="map-banner" id="mapBanner" style="display:none"></div>
+    </div>
     <div class="map-legend">🟢 aktivierte Plätze · 🔵 Plätze zum Aktivieren (tippe einen Punkt an) · 🟠 deine Auswahl.</div>
     <div class="map-hint" id="mapHint"></div>
   </div>
@@ -2641,6 +2647,14 @@
     box.appendChild(more);
   }
 
+  function setMapHint(msg) {
+    var h2 = document.getElementById("mapBanner");
+    if (h2) {
+      h2.textContent = msg || "";
+      h2.style.display = msg ? "" : "none";
+    }
+  }
+
   function candFromElement(el, ty) {
     var mode = ty || typeSel;
     var t = el.type === "node" ? "n" : (el.type === "way" ? "w" : (el.type === "relation" ? "r" : ""));
@@ -2708,11 +2722,10 @@
 
   function fetchMapCands() {
     if (!mapObj || !mapOpen || typeof fetch !== "function") return;
-    var hintEl = document.getElementById("mapHint");
     if (mapObj.getZoom() < 12) {
       mapCands = [];
       drawCands();
-      if (hintEl) hintEl.textContent = "Zoome näher heran, um Plätze zum Aktivieren zu sehen.";
+      setMapHint("Zoome näher heran, um Plätze zum Aktivieren zu sehen.");
       return;
     }
     var b = mapObj.getBounds();
@@ -2736,11 +2749,11 @@
     var seq = ++mapCandSeq;
     var type = typeSel;
     if (mapAbort) { mapAbort.__cancelled = true; try { mapAbort.abort(); } catch (e) {} }
-    if (hintEl) hintEl.textContent = "Lade Plätze ...";
+    setMapHint("Lade Plätze ...");
     overpassFetch(q, function (err, j) {
       if (seq !== mapCandSeq) return;
       if (err) {
-        if (hintEl) hintEl.textContent = "Die Plätze konnten gerade nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.";
+        setMapHint("Die Plätze konnten gerade nicht geladen werden. Verschiebe die Karte, um es nochmal zu versuchen.");
         return;
       }
       var out = [];
@@ -2782,9 +2795,8 @@
       return (Math.abs(a.lat - c0.lat) + Math.abs(a.lon - c0.lng)) - (Math.abs(z.lat - c0.lat) + Math.abs(z.lon - c0.lng));
     });
     vis = vis.slice(0, 120);
-    var hintEl = document.getElementById("mapHint");
-    if (hintEl && mapObj.getZoom() >= 12) {
-      hintEl.textContent = vis.length ? vis.length + (vis.length === 1 ? " Platz" : " Plätze") + " im Kartenausschnitt. Tippe einen blauen Punkt an." : "In diesem Ausschnitt wurden keine Plätze gefunden. Verschiebe die Karte.";
+    if (mapObj.getZoom() >= 12) {
+      setMapHint(vis.length ? vis.length + (vis.length === 1 ? " Platz" : " Plätze") + " im Kartenausschnitt. Tippe einen blauen Punkt an." : "In diesem Ausschnitt wurden keine Plätze gefunden. Verschiebe die Karte.");
     }
     for (var k = 0; k < vis.length; k++) {
       (function (c) {
@@ -2870,8 +2882,8 @@
     if (!mapUserMoved) {
       if (pts.length > 0) {
         try { mapObj.fitBounds(pts, { padding: [30, 30], maxZoom: 15 }); } catch (e) {}
-      } else if (known.length > 0) {
-        try { mapObj.fitBounds(known, { padding: [30, 30], maxZoom: 14 }); } catch (e) {}
+      } else if (areaSel && BEZIRK_CENTER[areaSel]) {
+        try { mapObj.setView(BEZIRK_CENTER[areaSel], 13); } catch (e) {}
       }
     }
     drawCands();
@@ -2898,11 +2910,32 @@
       mapWrap.style.display = mapOpen ? "" : "none";
       mapToggle.textContent = mapOpen ? "🗺️ Karte ausblenden" : "🗺️ Alle Plätze auf der Karte";
       if (mapOpen && !mapObj) {
-        mapObj = L.map("map", { zoomControl: false, zoomSnap: 0.5, wheelDebounceTime: 80 }).setView([52.52, 13.405], 12);
+        mapObj = L.map("map", { zoomControl: false, zoomSnap: 0.5, wheelDebounceTime: 80 }).setView(userPos ? [userPos.lat, userPos.lon] : (BEZIRK_CENTER[areaSel] || [52.52, 13.405]), userPos || BEZIRK_CENTER[areaSel] ? 13 : 12);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19, keepBuffer: 4, updateWhenIdle: true, attribution: "&copy; OpenStreetMap-Mitwirkende"
         }).addTo(mapObj);
         L.control.zoom({ position: "bottomright" }).addTo(mapObj);
+        var LocCtl = L.Control.extend({
+          options: { position: "bottomright" },
+          onAdd: function () {
+            var b = L.DomUtil.create("button", "map-loc");
+            b.type = "button";
+            b.title = "Zu meinem Standort";
+            b.textContent = "📍";
+            L.DomEvent.disableClickPropagation(b);
+            L.DomEvent.on(b, "click", function () {
+              mapUserMoved = true;
+              mapObj.locate({ setView: true, maxZoom: 14, timeout: 8000 });
+            });
+            return b;
+          }
+        });
+        new LocCtl().addTo(mapObj);
+        mapObj.on("locationerror", function () { setMapHint("Standort nicht verfügbar. Erlaube den Standortzugriff im Browser."); });
+        mapObj.on("locationfound", function (ev) {
+          if (typeof userPos !== "undefined") { userPos = { lat: ev.latlng.lat, lon: ev.latlng.lng }; }
+          updateMap();
+        });
         mapLayer = L.layerGroup().addTo(mapObj);
         mapCandLayer = L.layerGroup().addTo(mapObj);
         mapObj.on("dragstart", function () { mapUserMoved = true; });
